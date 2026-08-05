@@ -1,0 +1,6 @@
+{
+  "name": "רשם ציוד רפואי - Kiosk",
+  "description": "אפליקציית רישום וסריקת ציוד רפואי, שיוך מספר סדורי למספר נכס ומדבקות בטיחות חשמלית",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
