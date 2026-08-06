@@ -2,23 +2,38 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val MedicalTealPrimary = Color(0xFF006A6A)
-val MedicalTealOnPrimary = Color(0xFFFFFFFF)
-val MedicalTealContainer = Color(0xFF9CF1F0)
-val MedicalTealOnContainer = Color(0xFF002020)
+// High-Contrast Luminous Primary Medical Palette
+val HighDensityPrimary = Color(0xFF0052CC) // Vibrant Royal Blue
+val HighDensityOnPrimary = Color(0xFFFFFFFF) // Pure White
+val HighDensityPrimaryContainer = Color(0xFFE8F1FF) // Bright Soft Blue Tint
+val HighDensityOnPrimaryContainer = Color(0xFF001E4D) // Deep High-Contrast Navy
 
-val MedicalGreenSuccess = Color(0xFF1B6D3A)
-val MedicalGreenContainer = Color(0xFFC7F3D3)
-val MedicalGreenOnContainer = Color(0xFF00210B)
+val HighDensityDarkBlue = Color(0xFF0A2540) // Clean Header Navy
+val HighDensityOnDarkBlue = Color(0xFFFFFFFF)
 
-val MedicalAmberWarning = Color(0xFF8B5000)
-val MedicalAmberContainer = Color(0xFFFFDCC2)
+val HighDensitySuccess = Color(0xFF0D6338) // High-contrast Emerald
+val HighDensitySuccessContainer = Color(0xFFE6F4EA)
+val HighDensityOnSuccessContainer = Color(0xFF023218)
 
-val MedicalBlueSecondary = Color(0xFF006399)
-val MedicalBlueContainer = Color(0xFFCDE5FF)
+val HighDensityWarning = Color(0xFFB25900) // High-contrast Warning Orange
+val HighDensityWarningContainer = Color(0xFFFFF0E6)
+val HighDensityOnWarningContainer = Color(0xFF421D00)
 
-val MedicalDarkSurface = Color(0xFF191C1C)
-val MedicalDarkBackground = Color(0xFF0E1414)
-val MedicalLightBackground = Color(0xFFF4FBFB)
-val MedicalLightSurface = Color(0xFFFFFFFF)
-val MedicalLightSurfaceVariant = Color(0xFFDAE5E4)
+val HighDensityBackground = Color(0xFFF4F6F9) // Luminous Clean Off-White Background
+val HighDensitySurface = Color(0xFFFFFFFF) // Crisp White Surface Cards
+val HighDensitySurfaceVariant = Color(0xFFEBF0F5) // Clear Contrast Variant
+val HighDensityOnSurface = Color(0xFF000000) // Pure Black (100% WCAG AAA Legibility)
+val HighDensityOnSurfaceVariant = Color(0xFF1E293B) // Slate-800 for High Contrast Secondary Text
+val HighDensityBorder = Color(0xFF94A3B8) // Slate-400 Crisp Borders
+
+// High Contrast Dark Palette (if dark mode is explicitly toggled)
+val DarkBackground = Color(0xFF0B131F)
+val DarkSurface = Color(0xFF152234)
+val DarkSurfaceVariant = Color(0xFF1E2D42)
+val DarkOnSurface = Color(0xFFFFFFFF)
+val DarkOnSurfaceVariant = Color(0xFFE2E8F0)
+val DarkBorder = Color(0xFF475569)
+val DarkPrimaryContainer = Color(0xFF163C72)
+val DarkOnPrimaryContainer = Color(0xFFE8F1FF)
+
+

@@ -55,9 +55,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.EquipmentItem
-import com.example.ui.theme.MedicalGreenContainer
-import com.example.ui.theme.MedicalGreenOnContainer
-import com.example.ui.theme.MedicalGreenSuccess
+import com.example.ui.theme.HighDensityDarkBlue
+import com.example.ui.theme.HighDensityPrimary
+import com.example.ui.theme.HighDensitySuccess
 import com.example.util.LabelPrinterHelper
 
 @Composable
@@ -85,7 +85,7 @@ fun PrintPreviewCard(
         // High visibility success banner
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = MedicalGreenContainer,
+            color = HighDensitySuccess,
             shape = RoundedCornerShape(12.dp)
         ) {
             Row(
@@ -95,20 +95,20 @@ fun PrintPreviewCard(
                 Icon(
                     imageVector = Icons.Default.VerifiedUser,
                     contentDescription = "שיוך אושר",
-                    tint = MedicalGreenSuccess,
+                    tint = Color.White,
                     modifier = Modifier.size(36.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "הציוד נרשם בהצלחה במערכת!",
+                        text = "הציוד נרשם בהצלחה - מוכן ל-SAP!",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MedicalGreenOnContainer
+                        color = Color.White
                     )
                     Text(
-                        text = "שויך נכס ${item.inventoryNumber} לסדורי ${item.serialNumber}",
+                        text = "שויך אינוונטר ${item.inventoryNumber} לסדורי ${item.serialNumber}",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MedicalGreenOnContainer
+                        color = Color.White.copy(alpha = 0.9f)
                     )
                 }
             }

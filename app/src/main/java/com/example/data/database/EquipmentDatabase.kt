@@ -54,6 +54,13 @@ abstract class EquipmentDatabase : RoomDatabase() {
             private suspend fun populateInitialRules(dao: ParsingRuleDao) {
                 val defaultRules = listOf(
                     ParsingRule(
+                        manufacturer = "SEERS MEDICAL (מיטות וספות טיפול)",
+                        regexPattern = """(?i)(?:SN|S/N)?[:= ]*([0-9]{5,8}|138988)""",
+                        prefixToRemove = "SN",
+                        description = "ספות ומיטות טיפול ובדיקה יצרן SEERS MEDICAL (דגם SM2560)",
+                        isActive = true
+                    ),
+                    ParsingRule(
                         manufacturer = "GS1-128 / DataMatrix (21)",
                         regexPattern = """(?i)(?:\(21\)|21)([A-Z0-9\-_]{5,25})""",
                         prefixToRemove = "(21)",
@@ -101,6 +108,21 @@ abstract class EquipmentDatabase : RoomDatabase() {
 
             private suspend fun populateInitialEquipment(dao: EquipmentDao) {
                 val sampleItems = listOf(
+                    EquipmentItem(
+                        inventoryNumber = "INV-2026-10001",
+                        rawManufacturerBarcode = "SEERS MEDICAL LTD|MODEL:SM2560|SN:138988|REF:SM2560-TMO-1WF",
+                        serialNumber = "138988",
+                        manufacturerName = "SEERS MEDICAL LTD.",
+                        equipmentType = "מיטת בדיקה וטיפול (Medicare 2 Section)",
+                        department = "מרפאות חוץ / בדיקות",
+                        safetyStickerId = "ELEC-2026-9013",
+                        testerName = "רועי לוי",
+                        registrationDate = "2026-08-05 14:30",
+                        safetyTestDate = "2026-08-05",
+                        nextSafetyTestDate = "2027-08-05",
+                        notes = "מיטת טיפול SEERS MEDICAL דגם SM2560 - שויכה לאינוונטר בהצלחה.",
+                        status = "מאושר ומודפס"
+                    ),
                     EquipmentItem(
                         inventoryNumber = "INV-2026-00101",
                         rawManufacturerBarcode = "(21)HR88329104|REF:BED-55",

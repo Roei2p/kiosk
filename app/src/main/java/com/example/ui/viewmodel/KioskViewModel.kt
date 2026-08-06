@@ -50,6 +50,30 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentStep = MutableStateFlow(RegistrationStep.STEP_1_SCAN_MANUFACTURER)
     val currentStep: StateFlow<RegistrationStep> = _currentStep.asStateFlow()
 
+    // Inventory Range Configuration State
+    private val _inventoryPrefix = MutableStateFlow("INV-2026-")
+    val inventoryPrefix: StateFlow<String> = _inventoryPrefix.asStateFlow()
+
+    private val _rangeStartNum = MutableStateFlow(10001)
+    val rangeStartNum: StateFlow<Int> = _rangeStartNum.asStateFlow()
+
+    private val _rangeEndNum = MutableStateFlow(20000)
+    val rangeEndNum: StateFlow<Int> = _rangeEndNum.asStateFlow()
+
+    private val _currentInvCounter = MutableStateFlow(10001)
+    val currentInvCounter: StateFlow<Int> = _currentInvCounter.asStateFlow()
+
+    private val _autoPairingEnabled = MutableStateFlow(true)
+    val autoPairingEnabled: StateFlow<Boolean> = _autoPairingEnabled.asStateFlow()
+
+    // Calculated remaining in defined range
+    val remainingInRange: StateFlow<Int> = combine(
+        _rangeEndNum,
+        _currentInvCounter
+    ) { end, current ->
+        (end - current + 1).coerceAtLeast(0)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 10000)
+
     // Form Fields
     private val _rawBarcode = MutableStateFlow("")
     val rawBarcode: StateFlow<String> = _rawBarcode.asStateFlow()
@@ -179,16 +203,30 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         _ruleTestInput.value = input
     }
 
+    fun updateInventoryRangeSettings(
+        prefix: String,
+        startNum: Int,
+        endNum: Int,
+        currentCounter: Int
+    ) {
+        _inventoryPrefix.value = prefix
+        _rangeStartNum.value = startNum
+        _rangeEndNum.value = endNum
+        _currentInvCounter.value = currentCounter
+        fetchNextAutoInventoryNumber()
+    }
+
+    private fun formatInventoryNumber(prefix: String, counter: Int): String {
+        return "$prefix$counter"
+    }
+
     fun generateAutoSafetyStickerId() {
         val randomNum = (1000..9999).random()
         _safetyStickerId.value = "ELEC-2026-$randomNum"
     }
 
     fun fetchNextAutoInventoryNumber() {
-        viewModelScope.launch {
-            val nextInv = repository.getNextInventoryNumber("INV-2026-")
-            _inventoryNumber.value = nextInv
-        }
+        _inventoryNumber.value = formatInventoryNumber(_inventoryPrefix.value, _currentInvCounter.value)
     }
 
     fun saveAndApproveEquipment() {
@@ -204,8 +242,12 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         cal.add(Calendar.YEAR, 1)
         val nextSafetyDateStr = dateOnlyFormat.format(cal.time)
 
+        val assignedInvNumber = _inventoryNumber.value.ifEmpty {
+            formatInventoryNumber(_inventoryPrefix.value, _currentInvCounter.value)
+        }
+
         val newItem = EquipmentItem(
-            inventoryNumber = _inventoryNumber.value.ifEmpty { "INV-2026-0000" },
+            inventoryNumber = assignedInvNumber,
             rawManufacturerBarcode = _rawBarcode.value.ifEmpty { _parsedSn.value },
             serialNumber = _parsedSn.value.ifEmpty { "UNKNOWN-SN" },
             manufacturerName = _manufacturerName.value,
@@ -223,6 +265,11 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.insertEquipment(newItem)
             _registeredItem.value = newItem
+            
+            // Advance inventory range counter for the next scan!
+            _currentInvCounter.value += 1
+            fetchNextAutoInventoryNumber()
+
             _currentStep.value = RegistrationStep.STEP_4_LABEL_PRINT_PREVIEW
         }
     }

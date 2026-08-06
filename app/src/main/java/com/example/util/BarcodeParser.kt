@@ -72,13 +72,14 @@ object BarcodeParser {
     private fun detectManufacturerFromRule(ruleName: String, cleanSn: String): String {
         val lowerRule = ruleName.lowercase()
         return when {
+            lowerRule.contains("seers") || cleanSn == "138988" -> "SEERS MEDICAL LTD."
             lowerRule.contains("hillrom") || cleanSn.startsWith("HR", ignoreCase = true) -> "Hillrom"
             lowerRule.contains("stryker") || cleanSn.startsWith("STR", ignoreCase = true) -> "Stryker"
             lowerRule.contains("mindray") || cleanSn.startsWith("MN", ignoreCase = true) -> "Mindray"
             lowerRule.contains("philips") || cleanSn.startsWith("PH", ignoreCase = true) -> "Philips"
             lowerRule.contains("siemens") || cleanSn.startsWith("SIE", ignoreCase = true) -> "Siemens"
             lowerRule.contains("ge") || cleanSn.startsWith("GE", ignoreCase = true) -> "GE Healthcare"
-            else -> "ציוד כללי"
+            else -> "SEERS MEDICAL / ציוד רפואי"
         }
     }
 }

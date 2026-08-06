@@ -2,6 +2,8 @@ package com.example.ui.components
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ConfirmationNumber
@@ -39,10 +42,10 @@ fun StepHeader(
     onStepClick: (RegistrationStep) -> Unit
 ) {
     val steps = listOf(
-        StepData(RegistrationStep.STEP_1_SCAN_MANUFACTURER, "1. סריקת ברקוד", Icons.Default.QrCodeScanner),
-        StepData(RegistrationStep.STEP_2_ASSIGN_INVENTORY, "2. שיוך נכס", Icons.Default.ConfirmationNumber),
-        StepData(RegistrationStep.STEP_3_VALIDATE_PAIR, "3. אישור ושיוך", Icons.Default.VerifiedUser),
-        StepData(RegistrationStep.STEP_4_LABEL_PRINT_PREVIEW, "4. הדפסת תווית", Icons.Default.Print)
+        StepData(RegistrationStep.STEP_1_SCAN_MANUFACTURER, "1. סריקת ברקוד/SN", Icons.Default.QrCodeScanner),
+        StepData(RegistrationStep.STEP_2_ASSIGN_INVENTORY, "2. שיוך אינוונטר", Icons.Default.ConfirmationNumber),
+        StepData(RegistrationStep.STEP_3_VALIDATE_PAIR, "3. אישור וקליטה", Icons.Default.VerifiedUser),
+        StepData(RegistrationStep.STEP_4_LABEL_PRINT_PREVIEW, "4. תווית (אופציונלי)", Icons.Default.Print)
     )
 
     Surface(
@@ -110,14 +113,21 @@ private fun StepItem(
     )
 
     Column(
-        modifier = modifier.padding(horizontal = 4.dp),
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp, horizontal = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier
-                .size(42.dp)
+                .size(44.dp)
                 .clip(CircleShape)
-                .background(circleColor),
+                .background(circleColor)
+                .then(
+                    if (isCurrent) Modifier.border(2.5.dp, MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                    else Modifier
+                ),
             contentAlignment = Alignment.Center
         ) {
             if (isCompleted) {
@@ -139,13 +149,13 @@ private fun StepItem(
 
         Text(
             text = title,
-            style = MaterialTheme.typography.bodySmall.copy(
+            style = MaterialTheme.typography.labelMedium.copy(
                 fontSize = 12.sp,
-                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium
+                fontWeight = if (isCurrent) FontWeight.ExtraBold else FontWeight.Medium
             ),
-            color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 4.dp)
+            modifier = Modifier.padding(top = 6.dp)
         )
     }
 }

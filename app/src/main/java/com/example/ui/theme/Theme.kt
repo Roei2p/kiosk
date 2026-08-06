@@ -15,33 +15,46 @@ import androidx.compose.ui.unit.LayoutDirection
 
 private val DarkColorScheme =
   darkColorScheme(
-    primary = MedicalTealContainer,
-    onPrimary = MedicalTealOnContainer,
-    primaryContainer = MedicalTealPrimary,
-    secondary = MedicalBlueContainer,
-    tertiary = MedicalGreenContainer,
-    background = MedicalDarkBackground,
-    surface = MedicalDarkSurface
+    primary = HighDensityPrimary,
+    onPrimary = HighDensityOnPrimary,
+    primaryContainer = DarkPrimaryContainer,
+    onPrimaryContainer = DarkOnPrimaryContainer,
+    secondary = HighDensityDarkBlue,
+    onSecondary = HighDensityOnDarkBlue,
+    tertiary = HighDensitySuccess,
+    tertiaryContainer = HighDensitySuccessContainer,
+    onTertiaryContainer = HighDensityOnSuccessContainer,
+    background = DarkBackground,
+    surface = DarkSurface,
+    surfaceVariant = DarkSurfaceVariant,
+    onSurface = DarkOnSurface,
+    onSurfaceVariant = DarkOnSurfaceVariant,
+    outline = DarkBorder
   )
 
 private val LightColorScheme =
   lightColorScheme(
-    primary = MedicalTealPrimary,
-    onPrimary = MedicalTealOnPrimary,
-    primaryContainer = MedicalTealContainer,
-    onPrimaryContainer = MedicalTealOnContainer,
-    secondary = MedicalBlueSecondary,
-    secondaryContainer = MedicalBlueContainer,
-    tertiary = MedicalGreenSuccess,
-    tertiaryContainer = MedicalGreenContainer,
-    background = MedicalLightBackground,
-    surface = MedicalLightSurface,
-    surfaceVariant = MedicalLightSurfaceVariant
+    primary = HighDensityPrimary,
+    onPrimary = HighDensityOnPrimary,
+    primaryContainer = HighDensityPrimaryContainer,
+    onPrimaryContainer = HighDensityOnPrimaryContainer,
+    secondary = HighDensityDarkBlue,
+    onSecondary = HighDensityOnDarkBlue,
+    secondaryContainer = HighDensityPrimaryContainer,
+    tertiary = HighDensitySuccess,
+    tertiaryContainer = HighDensitySuccessContainer,
+    onTertiaryContainer = HighDensityOnSuccessContainer,
+    background = HighDensityBackground,
+    surface = HighDensitySurface,
+    surfaceVariant = HighDensitySurfaceVariant,
+    onSurface = HighDensityOnSurface,
+    onSurfaceVariant = HighDensityOnSurfaceVariant,
+    outline = HighDensityBorder
   )
 
 @Composable
 fun MedicalKioskTheme(
-  darkTheme: Boolean = isSystemInDarkTheme(),
+  darkTheme: Boolean = false,
   dynamicColor: Boolean = false,
   content: @Composable () -> Unit,
 ) {
