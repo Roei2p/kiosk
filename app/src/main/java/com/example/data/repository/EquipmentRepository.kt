@@ -40,6 +40,10 @@ class EquipmentRepository(
         equipmentDao.deleteEquipmentById(id)
     }
 
+    suspend fun deleteAllEquipment() {
+        equipmentDao.deleteAllEquipment()
+    }
+
     suspend fun getActiveRulesList(): List<ParsingRule> {
         return parsingRuleDao.getActiveRulesList()
     }

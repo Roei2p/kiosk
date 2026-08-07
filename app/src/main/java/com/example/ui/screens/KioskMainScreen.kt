@@ -39,9 +39,18 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import com.example.ui.components.InventoryRangeSettingsDialog
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.ui.platform.LocalContext
 import com.example.ui.theme.HighDensityDarkBlue
-import com.example.ui.theme.HighDensityPrimary
+import com.example.ui.theme.HighDensitySuccess
+import com.example.util.SapCsvExporter
 import com.example.ui.viewmodel.KioskViewModel
 
 private data class NavItem(
@@ -62,6 +71,9 @@ fun KioskMainScreen(
     val rangeEndNum by viewModel.rangeEndNum.collectAsState()
     val currentInvCounter by viewModel.currentInvCounter.collectAsState()
     val remainingInRange by viewModel.remainingInRange.collectAsState()
+
+    val context = LocalContext.current
+    val equipmentList by viewModel.filteredEquipmentList.collectAsState()
 
     val navItems = listOf(
         NavItem("סריקה ורישום (Kiosk)", Icons.Default.QrCodeScanner),
@@ -86,46 +98,62 @@ fun KioskMainScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "רשם ציוד רפואי (SAP PM)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
                         Surface(
-                            color = Color.White.copy(alpha = 0.2f),
-                            shape = RoundedCornerShape(6.dp)
+                            color = Color.White,
+                            shape = RoundedCornerShape(8.dp),
+                            shadowElevation = 2.dp
                         ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.clalit_logo),
+                                contentDescription = "כללית הנדסה רפואית",
+                                modifier = Modifier
+                                    .height(38.dp)
+                                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                                contentScale = ContentScale.Fit
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "רשם ציוד רפואי (SAP PM)",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = Color.White
+                            )
                             Text(
                                 text = "הבא בטווח: $inventoryPrefix$currentInvCounter",
-                                color = Color.White,
-                                fontWeight = FontWeight.ExtraBold,
+                                color = Color.White.copy(alpha = 0.9f),
+                                fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.Monospace,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                fontSize = 12.sp
                             )
                         }
                     }
                 },
                 actions = {
                     Button(
-                        onClick = { showRangeDialog = true },
+                        onClick = {
+                            SapCsvExporter.exportAndShareExcelCsv(context, equipmentList)
+                        },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White,
-                            contentColor = HighDensityDarkBlue
+                            containerColor = HighDensitySuccess,
+                            contentColor = Color.White
                         ),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ConfirmationNumber,
-                            contentDescription = "הגדרת טווח",
-                            tint = HighDensityPrimary,
-                            modifier = Modifier.padding(end = 4.dp)
+                            imageVector = Icons.Default.Download,
+                            contentDescription = "ייצוא לאקסל",
+                            modifier = Modifier.size(18.dp)
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "הגדרת טווח אינוונטר",
+                            text = "ייצוא לאקסל",
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
                         )
@@ -168,7 +196,10 @@ fun KioskMainScreen(
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
             when (selectedTab) {
-                0 -> ScanRegistrationTab(viewModel = viewModel)
+                0 -> ScanRegistrationTab(
+                    viewModel = viewModel,
+                    onOpenRangeDialog = { showRangeDialog = true }
+                )
                 1 -> InventoryListTab(viewModel = viewModel)
                 2 -> BarcodeRulesTab(viewModel = viewModel)
             }

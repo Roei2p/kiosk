@@ -10,13 +10,13 @@ import java.io.OutputStreamWriter
 
 object SapCsvExporter {
 
-    fun generateSapCsvContent(items: List<EquipmentItem>): String {
+    fun generateExcelCsvContent(items: List<EquipmentItem>): String {
         val sb = StringBuilder()
-        // UTF-8 BOM so Excel opens Hebrew without corruption
+        // UTF-8 BOM so Microsoft Excel opens Hebrew letters cleanly without encoding corruption
         sb.append("\uFEFF")
         
-        // SAP PM Compatible Headers
-        sb.append("מספר נכס (Equipment_ID),מספר סדורי יצרן (Serial_No),יצרן (Manufacturer),סוג ציוד (Equipment_Type),מחלקה (Cost_Center_Dept),מדבקת בטיחות (Safety_Sticker_ID),שם בודק (Inspector),תאריך רישום (Created_At),תאריך בדיקת בטיחות (Safety_Date),תאריך בדיקה הבאה (Next_Safety_Due),הערות (Notes),סטטוס (Status)\n")
+        // Excel / CSV Headers - Clean Inventory & Serial Number export
+        sb.append("מספר אינוונטר,מספר סדורי (S/N),יצרן,סוג ציוד,מחלקה,תאריך רישום,הערות,סטטוס\n")
 
         for (item in items) {
             val line = listOf(
@@ -25,11 +25,7 @@ object SapCsvExporter {
                 sanitize(item.manufacturerName),
                 sanitize(item.equipmentType),
                 sanitize(item.department),
-                sanitize(item.safetyStickerId),
-                sanitize(item.testerName),
                 sanitize(item.registrationDate),
-                sanitize(item.safetyTestDate),
-                sanitize(item.nextSafetyTestDate),
                 sanitize(item.notes),
                 sanitize(item.status)
             ).joinToString(",")
@@ -48,10 +44,10 @@ object SapCsvExporter {
         return clean
     }
 
-    fun exportAndShareCsv(context: Context, items: List<EquipmentItem>): File? {
+    fun exportAndShareExcelCsv(context: Context, items: List<EquipmentItem>): File? {
         return try {
-            val csvData = generateSapCsvContent(items)
-            val fileName = "SAP_Medical_Equipment_Export_${System.currentTimeMillis()}.csv"
+            val csvData = generateExcelCsvContent(items)
+            val fileName = "Inventory_Serial_Numbers_Excel_${System.currentTimeMillis()}.csv"
             val file = File(context.cacheDir, fileName)
             
             val fos = FileOutputStream(file)
@@ -70,12 +66,12 @@ object SapCsvExporter {
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/csv"
                 putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, "ייצוא ציוד רפואי לקובץ SAP")
-                putExtra(Intent.EXTRA_TEXT, "מצורף קובץ CSV של ציוד רפואי רשום ומחורר לבטיחות חשמל למערכת SAP PM.")
+                putExtra(Intent.EXTRA_SUBJECT, "ייצוא אינוונטר ומספרים סדוריים לאקסל (Excel)")
+                putExtra(Intent.EXTRA_TEXT, "מצורף קובץ Excel / CSV המכיל את כל נתוני האינוונטר והמספרים הסדוריים שנרשמו.")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
-            context.startActivity(Intent.createChooser(shareIntent, "שתף קובץ SAP / CSV"))
+            context.startActivity(Intent.createChooser(shareIntent, "פתח או שתף קובץ אקסל (Excel)"))
             file
         } catch (e: Exception) {
             e.printStackTrace()
@@ -83,3 +79,4 @@ object SapCsvExporter {
         }
     }
 }
+

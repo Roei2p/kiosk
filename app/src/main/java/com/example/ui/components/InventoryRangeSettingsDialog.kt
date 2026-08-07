@@ -91,8 +91,8 @@ fun InventoryRangeSettingsDialog(
                 OutlinedTextField(
                     value = prefix,
                     onValueChange = { prefix = it },
-                    label = { Text("קידומת אינוונטר (Prefix)") },
-                    placeholder = { Text("לדוגמה: INV-2026- או MED-") },
+                    label = { Text("קידומת אינוונטר (אופציונלי)") },
+                    placeholder = { Text("ללא קידומת - מספר בלבד (מומלץ)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -107,7 +107,15 @@ fun InventoryRangeSettingsDialog(
                     // Start Number
                     OutlinedTextField(
                         value = startNumStr,
-                        onValueChange = { startNumStr = it },
+                        onValueChange = { newStart ->
+                            val oldStart = startNumStr.toIntOrNull()
+                            val curVal = currentCounterStr.toIntOrNull()
+                            startNumStr = newStart
+                            val newStartInt = newStart.toIntOrNull()
+                            if (newStartInt != null && (curVal == null || curVal == oldStart || curVal < newStartInt)) {
+                                currentCounterStr = newStart
+                            }
+                        },
                         label = { Text("מספר התחלתי") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -150,8 +158,8 @@ fun InventoryRangeSettingsDialog(
                 )
 
                 // Preview Card
-                val parsedStart = startNumStr.toIntOrNull() ?: 10001
-                val parsedEnd = endNumStr.toIntOrNull() ?: 20000
+                val parsedStart = startNumStr.toIntOrNull() ?: initialStartNum
+                val parsedEnd = endNumStr.toIntOrNull() ?: initialEndNum
                 val parsedCurrent = currentCounterStr.toIntOrNull() ?: parsedStart
 
                 Card(
@@ -210,7 +218,8 @@ fun InventoryRangeSettingsDialog(
                     } else if (e < s) {
                         errorMessage = "המספר הסופי חייב להיות גדול מההתחלתי"
                     } else {
-                        onSave(prefix, s, e, c)
+                        val validC = if (c < s || c > e) s else c
+                        onSave(prefix, s, e, validC)
                         onDismiss()
                     }
                 },

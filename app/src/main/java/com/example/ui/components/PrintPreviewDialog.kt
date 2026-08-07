@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.VerifiedUser
@@ -59,6 +60,7 @@ import com.example.ui.theme.HighDensityDarkBlue
 import com.example.ui.theme.HighDensityPrimary
 import com.example.ui.theme.HighDensitySuccess
 import com.example.util.LabelPrinterHelper
+import com.example.util.SapCsvExporter
 
 @Composable
 fun PrintPreviewCard(
@@ -303,24 +305,24 @@ fun PrintPreviewCard(
         ) {
             Button(
                 onClick = {
-                    onPrintClick()
-                    sendToAndroidPrintManager(context, item)
+                    SapCsvExporter.exportAndShareExcelCsv(context, listOf(item))
                 },
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                colors = ButtonDefaults.buttonColors(containerColor = HighDensitySuccess)
             ) {
-                Icon(Icons.Default.Print, contentDescription = "הדפס")
+                Icon(Icons.Default.Download, contentDescription = "ייצוא לאקסל")
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("הדפס מדבקות כעת", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("ייצוא לאקסל (Excel)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
 
-            OutlinedButton(
+            Button(
                 onClick = onNewScanClick,
                 modifier = Modifier
                     .weight(1f)
-                    .height(56.dp)
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = HighDensityPrimary)
             ) {
                 Icon(Icons.Default.QrCode2, contentDescription = "סריקה חדשה")
                 Spacer(modifier = Modifier.width(8.dp))
@@ -356,7 +358,7 @@ private fun sendToAndroidPrintManager(context: Context, item: EquipmentItem) {
                     <div>יצרן: ${item.manufacturerName} | ${item.equipmentType}</div>
                     <div>מחלקה: ${item.department}</div>
                 </div>
-                
+                ${if (item.safetyStickerId.isNotEmpty()) """
                 <div class="safety-box">
                     <div class="title" style="color: green;">★ מדבקת בטיחות חשמל - מאושר ★</div>
                     <div>מספר מדבקה: <b>${item.safetyStickerId}</b></div>
@@ -364,6 +366,7 @@ private fun sendToAndroidPrintManager(context: Context, item: EquipmentItem) {
                     <div class="highlight">בתוקף עד: ${item.nextSafetyTestDate}</div>
                     <div>בודק מוסמך: ${item.testerName}</div>
                 </div>
+                """ else ""}
             </body>
             </html>
         """.trimIndent()

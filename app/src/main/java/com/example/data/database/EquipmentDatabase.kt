@@ -109,7 +109,7 @@ abstract class EquipmentDatabase : RoomDatabase() {
             private suspend fun populateInitialEquipment(dao: EquipmentDao) {
                 val sampleItems = listOf(
                     EquipmentItem(
-                        inventoryNumber = "INV-2026-10001",
+                        inventoryNumber = "940100",
                         rawManufacturerBarcode = "SEERS MEDICAL LTD|MODEL:SM2560|SN:138988|REF:SM2560-TMO-1WF",
                         serialNumber = "138988",
                         manufacturerName = "SEERS MEDICAL LTD.",
@@ -124,7 +124,7 @@ abstract class EquipmentDatabase : RoomDatabase() {
                         status = "מאושר ומודפס"
                     ),
                     EquipmentItem(
-                        inventoryNumber = "INV-2026-00101",
+                        inventoryNumber = "940101",
                         rawManufacturerBarcode = "(21)HR88329104|REF:BED-55",
                         serialNumber = "HR88329104",
                         manufacturerName = "Hillrom",
@@ -139,7 +139,7 @@ abstract class EquipmentDatabase : RoomDatabase() {
                         status = "מאושר ומודפס"
                     ),
                     EquipmentItem(
-                        inventoryNumber = "INV-2026-00102",
+                        inventoryNumber = "940102",
                         rawManufacturerBarcode = "REF:MON-99|SN:MN-44210981",
                         serialNumber = "MN-44210981",
                         manufacturerName = "Mindray",

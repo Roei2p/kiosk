@@ -34,4 +34,7 @@ interface EquipmentDao {
 
     @Query("DELETE FROM equipment_items WHERE id = :id")
     suspend fun deleteEquipmentById(id: Int)
+
+    @Query("DELETE FROM equipment_items")
+    suspend fun deleteAllEquipment()
 }

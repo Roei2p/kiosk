@@ -1,6 +1,7 @@
 package com.example.ui.viewmodel
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.database.EquipmentDatabase
@@ -50,17 +51,25 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentStep = MutableStateFlow(RegistrationStep.STEP_1_SCAN_MANUFACTURER)
     val currentStep: StateFlow<RegistrationStep> = _currentStep.asStateFlow()
 
-    // Inventory Range Configuration State
-    private val _inventoryPrefix = MutableStateFlow("INV-2026-")
+    // Inventory Range Configuration State (Persisted in SharedPreferences)
+    private val prefs = application.getSharedPreferences("kiosk_inventory_prefs", Context.MODE_PRIVATE)
+
+    private val _inventoryPrefix = MutableStateFlow(prefs.getString("prefix", "") ?: "")
     val inventoryPrefix: StateFlow<String> = _inventoryPrefix.asStateFlow()
 
-    private val _rangeStartNum = MutableStateFlow(10001)
+    private val _rangeStartNum = MutableStateFlow(prefs.getInt("start_num", 940100))
     val rangeStartNum: StateFlow<Int> = _rangeStartNum.asStateFlow()
 
-    private val _rangeEndNum = MutableStateFlow(20000)
+    private val _rangeEndNum = MutableStateFlow(prefs.getInt("end_num", 940200))
     val rangeEndNum: StateFlow<Int> = _rangeEndNum.asStateFlow()
 
-    private val _currentInvCounter = MutableStateFlow(10001)
+    private val _currentInvCounter = MutableStateFlow(
+        prefs.getInt("current_counter", prefs.getInt("start_num", 940100)).let { saved ->
+            val start = prefs.getInt("start_num", 940100)
+            val end = prefs.getInt("end_num", 940200)
+            if (saved in start..end) saved else start
+        }
+    )
     val currentInvCounter: StateFlow<Int> = _currentInvCounter.asStateFlow()
 
     private val _autoPairingEnabled = MutableStateFlow(true)
@@ -126,7 +135,12 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
                     item.inventoryNumber.contains(query, ignoreCase = true) ||
                     item.serialNumber.contains(query, ignoreCase = true) ||
                     item.manufacturerName.contains(query, ignoreCase = true) ||
-                    item.safetyStickerId.contains(query, ignoreCase = true)
+                    item.equipmentType.contains(query, ignoreCase = true) ||
+                    item.department.contains(query, ignoreCase = true) ||
+                    item.safetyStickerId.contains(query, ignoreCase = true) ||
+                    item.testerName.contains(query, ignoreCase = true) ||
+                    item.rawManufacturerBarcode.contains(query, ignoreCase = true) ||
+                    item.notes.contains(query, ignoreCase = true)
 
             val matchesDept = dept == "הכל" || item.department == dept
             matchesQuery && matchesDept
@@ -138,13 +152,54 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     val ruleTestInput: StateFlow<String> = _ruleTestInput.asStateFlow()
 
     init {
-        generateAutoSafetyStickerId()
+        viewModelScope.launch {
+            allEquipmentList.collect { list ->
+                syncCounterWithExistingItems(list)
+            }
+        }
+        fetchNextAutoInventoryNumber()
+    }
+
+    private fun syncCounterWithExistingItems(list: List<EquipmentItem>) {
+        val prefix = _inventoryPrefix.value
+        val start = _rangeStartNum.value
+        val end = _rangeEndNum.value
+
+        var maxInDb = 0
+        for (item in list) {
+            val inv = item.inventoryNumber
+            val numPart = if (prefix.isNotEmpty() && inv.startsWith(prefix)) {
+                inv.removePrefix(prefix).toIntOrNull()
+            } else {
+                inv.toIntOrNull() ?: inv.replace(Regex("[^0-9]"), "").toIntOrNull()
+            }
+            if (numPart != null && numPart in start..end) {
+                if (numPart > maxInDb) {
+                    maxInDb = numPart
+                }
+            }
+        }
+
+        if (maxInDb >= start) {
+            val nextAvailable = maxInDb + 1
+            if (nextAvailable > _currentInvCounter.value) {
+                _currentInvCounter.value = nextAvailable.coerceAtMost(end)
+            }
+        } else {
+            if (_currentInvCounter.value < start || _currentInvCounter.value > end) {
+                _currentInvCounter.value = start
+            }
+        }
+        prefs.edit().putInt("current_counter", _currentInvCounter.value).apply()
         fetchNextAutoInventoryNumber()
     }
 
     // --- Actions ---
 
     fun setStep(step: RegistrationStep) {
+        if (step == RegistrationStep.STEP_2_ASSIGN_INVENTORY) {
+            fetchNextAutoInventoryNumber()
+        }
         _currentStep.value = step
     }
 
@@ -156,6 +211,7 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             _parsedSn.value = parseResult.cleanSerialNumber
             _matchedRuleName.value = parseResult.matchedRuleName
             _manufacturerName.value = parseResult.detectedManufacturer
+            fetchNextAutoInventoryNumber()
         }
     }
 
@@ -212,7 +268,17 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         _inventoryPrefix.value = prefix
         _rangeStartNum.value = startNum
         _rangeEndNum.value = endNum
-        _currentInvCounter.value = currentCounter
+        val validCounter = if (currentCounter in startNum..endNum) currentCounter else startNum
+        _currentInvCounter.value = validCounter
+
+        prefs.edit()
+            .putString("prefix", prefix)
+            .putInt("start_num", startNum)
+            .putInt("end_num", endNum)
+            .putInt("current_counter", validCounter)
+            .apply()
+
+        syncCounterWithExistingItems(allEquipmentList.value)
         fetchNextAutoInventoryNumber()
     }
 
@@ -226,6 +292,9 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun fetchNextAutoInventoryNumber() {
+        if (_currentInvCounter.value < _rangeStartNum.value || _currentInvCounter.value > _rangeEndNum.value) {
+            _currentInvCounter.value = _rangeStartNum.value
+        }
         _inventoryNumber.value = formatInventoryNumber(_inventoryPrefix.value, _currentInvCounter.value)
     }
 
@@ -253,13 +322,13 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             manufacturerName = _manufacturerName.value,
             equipmentType = _equipmentType.value,
             department = _department.value,
-            safetyStickerId = _safetyStickerId.value.ifEmpty { "ELEC-2026-0000" },
+            safetyStickerId = _safetyStickerId.value,
             testerName = _testerName.value,
             registrationDate = regDateStr,
             safetyTestDate = safetyDateStr,
             nextSafetyTestDate = nextSafetyDateStr,
             notes = _notes.value,
-            status = "מאושר ומודפס"
+            status = "מאושר במלאי"
         )
 
         viewModelScope.launch {
@@ -267,7 +336,9 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
             _registeredItem.value = newItem
             
             // Advance inventory range counter for the next scan!
-            _currentInvCounter.value += 1
+            val nextCounter = (_currentInvCounter.value + 1).coerceAtMost(_rangeEndNum.value)
+            _currentInvCounter.value = nextCounter
+            prefs.edit().putInt("current_counter", nextCounter).apply()
             fetchNextAutoInventoryNumber()
 
             _currentStep.value = RegistrationStep.STEP_4_LABEL_PRINT_PREVIEW
@@ -280,7 +351,6 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         _matchedRuleName.value = ""
         _registeredItem.value = null
         _notes.value = ""
-        generateAutoSafetyStickerId()
         fetchNextAutoInventoryNumber()
         _currentStep.value = RegistrationStep.STEP_1_SCAN_MANUFACTURER
     }
@@ -288,6 +358,20 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteEquipment(item: EquipmentItem) {
         viewModelScope.launch {
             repository.deleteEquipment(item)
+        }
+    }
+
+    fun deleteBatchEquipment(items: List<EquipmentItem>) {
+        viewModelScope.launch {
+            items.forEach { item ->
+                repository.deleteEquipment(item)
+            }
+        }
+    }
+
+    fun deleteAllEquipment() {
+        viewModelScope.launch {
+            repository.deleteAllEquipment()
         }
     }
 
