@@ -6,6 +6,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,8 +26,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CameraAlt
@@ -49,9 +50,11 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -59,6 +62,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.example.util.SapCsvExporter
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -201,6 +205,10 @@ fun ScanRegistrationTab(
                         parsedSn = parsedSn,
                         manufacturerName = manufacturerName,
                         matchedRuleName = matchedRuleName,
+                        equipmentType = equipmentType,
+                        department = department,
+                        inventoryNumber = inventoryNumber,
+                        allEquipmentList = allEquipmentList,
                         recentCount = allEquipmentList.size,
                         inventoryPrefix = inventoryPrefix,
                         rangeStartNum = rangeStartNum,
@@ -211,9 +219,20 @@ fun ScanRegistrationTab(
                         onBarcodeChange = { raw -> viewModel.onScanManufacturerBarcode(raw) },
                         onParsedSnChange = { sn -> viewModel.setParsedSn(sn) },
                         onManufacturerChange = { mfr -> viewModel.setManufacturerName(mfr) },
+                        onEquipmentTypeChange = { type -> viewModel.setEquipmentType(type) },
+                        onDepartmentChange = { dept -> viewModel.setDepartment(dept) },
+                        onInventoryNumberChange = { inv -> viewModel.setInventoryNumber(inv) },
+                        onGenerateNextInv = { viewModel.fetchNextAutoInventoryNumber() },
                         onOpenCamera = { showCameraModal = true },
                         onUploadGallery = { galleryPickerLauncher.launch("image/*") },
                         onOpenRangeDialog = onOpenRangeDialog,
+                        onSaveAndApprove = {
+                            viewModel.saveAndApproveEquipment()
+                            SapCsvExporter.exportAndShareExcelCsv(context, viewModel.allEquipmentList.value)
+                        },
+                        onExportExcelDirect = {
+                            SapCsvExporter.exportAndShareExcelCsv(context, allEquipmentList)
+                        },
                         onNextClick = { viewModel.setStep(RegistrationStep.STEP_2_ASSIGN_INVENTORY) }
                     )
                 }
@@ -295,6 +314,10 @@ private fun Step1ScanManufacturerContent(
     parsedSn: String,
     manufacturerName: String,
     matchedRuleName: String,
+    equipmentType: String,
+    department: String,
+    inventoryNumber: String,
+    allEquipmentList: List<com.example.data.model.EquipmentItem>,
     recentCount: Int,
     inventoryPrefix: String,
     rangeStartNum: Int,
@@ -305,155 +328,89 @@ private fun Step1ScanManufacturerContent(
     onBarcodeChange: (String) -> Unit,
     onParsedSnChange: (String) -> Unit,
     onManufacturerChange: (String) -> Unit,
+    onEquipmentTypeChange: (String) -> Unit,
+    onDepartmentChange: (String) -> Unit,
+    onInventoryNumberChange: (String) -> Unit,
+    onGenerateNextInv: () -> Unit,
     onOpenCamera: () -> Unit,
     onUploadGallery: () -> Unit,
     onOpenRangeDialog: () -> Unit,
+    onSaveAndApprove: () -> Unit,
+    onExportExcelDirect: () -> Unit,
     onNextClick: () -> Unit
 ) {
     val scrollState = rememberScrollState()
-
-    // Do not auto-pop keyboard on start
-    LaunchedEffect(Unit) {
-        // Soft keyboard will not pop up automatically
-    }
+    var typeExpanded by remember { mutableStateOf(false) }
+    var deptExpanded by remember { mutableStateOf(false) }
+    var showTableParams by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Hero Card: Inventory Range Setup & Flow Starter
+        // PROMINENT TOP CARD FOR INVENTORY RANGE DEFINITION
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = HighDensityDarkBlue),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Column(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+                Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            color = HighDensityPrimary,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.size(40.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.ConfirmationNumber,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "קליטת ציוד רפואי",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = Color.White
-                            )
-                            Text(
-                                text = "שיוך מספרים סדוריים לטווח אינוונטר",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.8f)
-                            )
-                        }
-                    }
-
-                    Surface(
-                        color = Color.White.copy(alpha = 0.15f),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ConfirmationNumber,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "נרשמו: $recentCount",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White,
+                            text = "הגדרת טווח אינוונטרים",
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            color = Color.White
                         )
                     }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "טווח מוגדר: $inventoryPrefix$rangeStartNum .. $inventoryPrefix$rangeEndNum | הבא: $inventoryPrefix$currentInvCounter (נותרו: $remainingInRange)",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White.copy(alpha = 0.85f)
+                    )
                 }
 
-                // Range details bar
-                Surface(
-                    color = Color.White.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "המספר הבא לשיוך:",
-                                fontSize = 11.sp,
-                                color = Color.White.copy(alpha = 0.7f)
-                            )
-                            Text(
-                                text = "$inventoryPrefix$currentInvCounter",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontFamily = FontFamily.Monospace,
-                                color = Color.White
-                            )
-                        }
+                Spacer(modifier = Modifier.width(8.dp))
 
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = "טווח: $inventoryPrefix$rangeStartNum .. $inventoryPrefix$rangeEndNum",
-                                fontSize = 11.sp,
-                                color = Color.White.copy(alpha = 0.7f)
-                            )
-                            Text(
-                                text = "נותרו בטווח: $remainingInRange",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = HighDensitySuccess
-                            )
-                        }
-                    }
-                }
-
-                // Action Button to Open Range Flow
                 Button(
                     onClick = onOpenRangeDialog,
-                    modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = HighDensityPrimary,
                         contentColor = Color.White
-                    )
+                    ),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ConfirmationNumber,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "הגדר / עדכן טווח אינוונטר",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
+                        text = "הגדר טווח",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
         }
 
-        // Barcode / Photo Label Input Card
+        // 1. הצעת סריקת ברקוד / מדבקת יצרן (Front Offer)
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -462,83 +419,50 @@ private fun Step1ScanManufacturerContent(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "זיהוי מספר סידורי ממדבקת היצרן:",
-                    style = MaterialTheme.typography.labelLarge,
+                    text = "1. הצעת סריקת הברקוד ומדבקת היצרן:",
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = HighDensityDarkBlue
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Prominent Primary Action: Open Camera for Photo / Scan
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = onOpenCamera,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(50.dp),
+                            .weight(1f)
+                            .height(46.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = HighDensityPrimary),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Icon(
-                            Icons.Default.CameraAlt,
-                            contentDescription = null,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "צלם מדבקת ציוד במצלמה בזמן אמת",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("סרוק במצלמה", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
 
                     OutlinedButton(
                         onClick = onUploadGallery,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
+                            .weight(1f)
+                            .height(46.dp),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Icon(
-                            Icons.Default.Image,
-                            contentDescription = null,
-                            tint = HighDensityPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "העלה תמונת מדבקה מגלריית המכשיר",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = HighDensityPrimary
-                        )
+                        Icon(Icons.Default.Image, contentDescription = null, tint = HighDensityPrimary, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("העלה מגלרייה", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HighDensityPrimary)
                     }
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Text(
-                    text = "או הקלד/סרוק ברקוד ידנית:",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
                     value = rawBarcode,
                     onValueChange = onBarcodeChange,
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("הקלידו או סרקו מזהה/ברקוד...") },
+                    placeholder = { Text("הקלידו או סרקו ברקוד מקורי מתוך הצעת המכשיר...") },
                     leadingIcon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = HighDensityPrimary) },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = {
-                        if (parsedSn.isNotEmpty()) {
-                            onNextClick()
-                        }
-                    }),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = HighDensityPrimary,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
@@ -547,42 +471,66 @@ private fun Step1ScanManufacturerContent(
             }
         }
 
-        // Live Regex Parsing Result Card
-        if (parsedSn.isNotEmpty() || rawBarcode.isNotEmpty()) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.5.dp, HighDensityPrimary, RoundedCornerShape(12.dp)),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        // DIVIDER LINE 1: Between filtered data and definition confirmation
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            HorizontalDivider(modifier = Modifier.weight(1f), color = HighDensityPrimary.copy(alpha = 0.4f), thickness = 1.dp)
+            Surface(
+                color = HighDensityPrimary.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.padding(horizontal = 8.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = null,
-                                tint = HighDensityPrimary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "מספר סדורי שזוהה:",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = HighDensityPrimary
-                            )
-                        }
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = HighDensityPrimary, modifier = Modifier.size(15.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "נתונים מסוננים ומפוענחים בהתאם להגדרה הראשונית",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = HighDensityDarkBlue
+                    )
+                }
+            }
+            HorizontalDivider(modifier = Modifier.weight(1f), color = HighDensityPrimary.copy(alpha = 0.4f), thickness = 1.dp)
+        }
 
+        // 2. אישור הנתונים המסוננים
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.5.dp, HighDensityPrimary, RoundedCornerShape(12.dp)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "2. אישור ואימות נתוני הציוד שהוצעו:",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = HighDensityPrimary
+                    )
+
+                    if (matchedRuleName.isNotEmpty()) {
                         Surface(
                             color = HighDensityPrimary.copy(alpha = 0.1f),
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
-                                text = "זיהוי אוטומטי",
+                                text = "כלל: $matchedRuleName",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = HighDensityPrimary,
@@ -590,79 +538,241 @@ private fun Step1ScanManufacturerContent(
                             )
                         }
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Extracted SN Monospace Box
-                    OutlinedTextField(
-                        value = parsedSn,
-                        onValueChange = onParsedSnChange,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("מספר סדורי (SN)") },
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.titleMedium.copy(
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = HighDensityDarkBlue
-                        ),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = HighDensityPrimary,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                        )
+                OutlinedTextField(
+                    value = parsedSn,
+                    onValueChange = onParsedSnChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("מספר סדורי שזוהה (S/N)") },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.titleMedium.copy(
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        color = HighDensityDarkBlue
                     )
+                )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = manufacturerName,
+                    onValueChange = onManufacturerChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("שם יצרן") },
+                    singleLine = true,
+                    placeholder = { Text("Stryker, Mindray, Siemens...") }
+                )
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ExposedDropdownMenuBox(
+                        expanded = typeExpanded,
+                        onExpandedChange = { typeExpanded = !typeExpanded },
+                        modifier = Modifier.weight(1f)
                     ) {
-                        Text(
-                            text = "כלל מופעל: $matchedRuleName",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        OutlinedTextField(
+                            value = equipmentType,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("סוג ציוד") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) },
+                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
                         )
-                        Text(
-                            text = "יצרן מזוהה: $manufacturerName",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold,
-                            color = HighDensityDarkBlue
-                        )
+                        ExposedDropdownMenu(
+                            expanded = typeExpanded,
+                            onDismissRequest = { typeExpanded = false }
+                        ) {
+                            EQUIPMENT_TYPES.forEach { type ->
+                                DropdownMenuItem(
+                                    text = { Text(type, fontSize = 12.sp) },
+                                    onClick = {
+                                        onEquipmentTypeChange(type)
+                                        typeExpanded = false
+                                    }
+                                )
+                            }
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = "שם יצרן הציוד:",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    OutlinedTextField(
-                        value = manufacturerName,
-                        onValueChange = onManufacturerChange,
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        placeholder = { Text("Stryker, Siemens, Hillrom...") }
-                    )
+                    ExposedDropdownMenuBox(
+                        expanded = deptExpanded,
+                        onExpandedChange = { deptExpanded = !deptExpanded },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = department,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("מחלקה") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = deptExpanded) },
+                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = deptExpanded,
+                            onDismissRequest = { deptExpanded = false }
+                        ) {
+                            DEPARTMENTS.forEach { dept ->
+                                DropdownMenuItem(
+                                    text = { Text(dept, fontSize = 12.sp) },
+                                    onClick = {
+                                        onDepartmentChange(dept)
+                                        deptExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Next Button
-        Button(
-            onClick = onNextClick,
-            enabled = parsedSn.isNotEmpty() || rawBarcode.isNotEmpty(),
+        // DIVIDER LINE 2: Between confirmed data and inventory range numbers
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(54.dp),
-            shape = RoundedCornerShape(10.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = HighDensityPrimary)
+                .padding(vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("המשך לשלב 2: שיוך אינוונטר (מספר נכס)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(Icons.Default.ArrowBack, contentDescription = "הבא")
+            HorizontalDivider(modifier = Modifier.weight(1f), color = HighDensitySuccess.copy(alpha = 0.4f), thickness = 1.dp)
+            Surface(
+                color = HighDensitySuccess.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.padding(horizontal = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.ConfirmationNumber, contentDescription = null, tint = HighDensitySuccess, modifier = Modifier.size(15.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "שיוך מספר אינוונטר מתוך הטווח המוגדר",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = HighDensitySuccess
+                    )
+                }
+            }
+            HorizontalDivider(modifier = Modifier.weight(1f), color = HighDensitySuccess.copy(alpha = 0.4f), thickness = 1.dp)
+        }
+
+        // 3. שיוך מספר אינוונטר וייצוא לאקסל (Excel)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = "3. שיוך מספר אינוונטר וייצוא קובץ אקסל:",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = HighDensityDarkBlue
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = inventoryNumber,
+                        onValueChange = onInventoryNumberChange,
+                        modifier = Modifier.weight(1f),
+                        label = { Text("מספר אינוונטר מוקצה") },
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.titleMedium.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            color = HighDensityDarkBlue
+                        )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(onClick = onGenerateNextInv) {
+                        Text("הבא בטווח", fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                // Primary Action Button: Save & Export to Excel
+                Button(
+                    onClick = onSaveAndApprove,
+                    enabled = parsedSn.isNotEmpty() || rawBarcode.isNotEmpty(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = HighDensitySuccess)
+                ) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("אישור, קליטה וייצוא לאקסל (Excel)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Direct Excel Export Button
+                OutlinedButton(
+                    onClick = onExportExcelDirect,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Default.TableChart, contentDescription = null, tint = HighDensityPrimary, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("הורד / שתף קובץ Excel ($recentCount פריטים שנרשמו)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = HighDensityPrimary)
+                }
+            }
+        }
+
+        // 4. פרמטרים והגדרות טבלה (רוחב טבלה, תבנית, ופורמטים)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showTableParams = !showTableParams },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Settings, contentDescription = null, tint = HighDensityDarkBlue, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "פרמטרים והגדרות טבלה (רוחב, תבנית ייצוא)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = HighDensityDarkBlue
+                        )
+                    }
+                    Text(if (showTableParams) "הסתר ▲" else "הצג ▼", fontSize = 12.sp, color = HighDensityPrimary, fontWeight = FontWeight.Bold)
+                }
+
+                AnimatedVisibility(visible = showTableParams) {
+                    Column(
+                        modifier = Modifier.padding(top = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.surface,
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("• רוחב עמודות טבלה: Auto-Fit (120% מותאם לעברית)", fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                Text("• תבנית ייצוא: Excel / CSV Standard (אינוונטר, S/N, יצרן, סוג, מחלקה, תאריך)", fontSize = 12.sp)
+                                Text("• קידוד קובץ: UTF-8 with BOM (פתיחה תקינה מיידית ב-Microsoft Excel)", fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -742,7 +852,7 @@ private fun Step2AssignInventoryContent(
                         color = Color.White
                     )
                     Text(
-                        text = "שיוך מספר אינוונטר למספר הסידורי $parsedSn לצורך קליטה ב-SAP",
+                        text = "שיוך מספר אינוונטר למספר הסידורי $parsedSn לצורך קליטה במאגר",
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.White.copy(alpha = 0.8f)
                     )
@@ -864,7 +974,7 @@ private fun Step2AssignInventoryContent(
                         shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
-                            text = "רציף אוטומטי ל-SAP",
+                            text = "רציף אוטומטי במערכת",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = HighDensityPrimary,
@@ -934,7 +1044,7 @@ private fun Step2AssignInventoryContent(
                         onValueChange = {},
                         readOnly = true,
                         modifier = Modifier
-                            .menuAnchor()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                             .fillMaxWidth(),
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = typeExpanded) }
                     )
@@ -956,7 +1066,7 @@ private fun Step2AssignInventoryContent(
 
                 // Department
                 Text(
-                    text = "מחלקה / שיוך ארגוני ב-SAP:",
+                    text = "מחלקה / שיוך ארגוני:",
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -969,7 +1079,7 @@ private fun Step2AssignInventoryContent(
                         onValueChange = {},
                         readOnly = true,
                         modifier = Modifier
-                            .menuAnchor()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                             .fillMaxWidth(),
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = deptExpanded) }
                     )
@@ -1114,7 +1224,7 @@ private fun Step2AssignInventoryContent(
                     .height(54.dp),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Icon(Icons.Default.ArrowForward, contentDescription = "חזור")
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "חזור")
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("חזור לסריקה")
             }
@@ -1129,7 +1239,7 @@ private fun Step2AssignInventoryContent(
             ) {
                 Text("אישור ורישום אינוונטר", fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.width(8.dp))
-                Icon(Icons.Default.ArrowBack, contentDescription = "הבא")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "הבא")
             }
         }
     }
@@ -1178,7 +1288,7 @@ private fun Step3ValidatePairContent(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "אישור וקליטה ישירה ב-SAP",
+                        text = "אישור וקליטה ישירה במאגר",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = Color.White
                     )
@@ -1209,7 +1319,7 @@ private fun Step3ValidatePairContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "פרטי שיוך ל-SAP PM",
+                        text = "פרטי שיוך וסריקת ציוד",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = HighDensityDarkBlue
@@ -1264,7 +1374,7 @@ private fun Step3ValidatePairContent(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "אשר ורשום במלאי (מוכן לייצוא SAP)",
+                    text = "אשר ורשום במלאי",
                     fontSize = 17.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -1277,7 +1387,7 @@ private fun Step3ValidatePairContent(
                     .height(48.dp),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Icon(Icons.Default.ArrowForward, contentDescription = "חזור")
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "חזור")
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("חזור לתיקון נתונים")
             }

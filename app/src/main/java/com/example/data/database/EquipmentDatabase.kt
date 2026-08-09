@@ -28,11 +28,13 @@ abstract class EquipmentDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): EquipmentDatabase {
             return INSTANCE ?: synchronized(this) {
+                val appContext = context.applicationContext
                 val instance = Room.databaseBuilder(
-                    context.applicationContext,
+                    appContext,
                     EquipmentDatabase::class.java,
                     "medical_equipment_kiosk.db"
                 )
+                .fallbackToDestructiveMigration()
                 .addCallback(DatabaseCallback())
                 .build()
                 INSTANCE = instance
@@ -43,10 +45,14 @@ abstract class EquipmentDatabase : RoomDatabase() {
         private class DatabaseCallback : RoomDatabase.Callback() {
             override fun onCreate(db: SupportSQLiteDatabase) {
                 super.onCreate(db)
-                INSTANCE?.let { database ->
-                    CoroutineScope(Dispatchers.IO).launch {
-                        populateInitialRules(database.parsingRuleDao())
-                        populateInitialEquipment(database.equipmentDao())
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        INSTANCE?.let { database ->
+                            populateInitialRules(database.parsingRuleDao())
+                            populateInitialEquipment(database.equipmentDao())
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 }
             }
@@ -55,9 +61,9 @@ abstract class EquipmentDatabase : RoomDatabase() {
                 val defaultRules = listOf(
                     ParsingRule(
                         manufacturer = "SEERS MEDICAL (מיטות וספות טיפול)",
-                        regexPattern = """(?i)(?:SN|S/N)?[:= ]*([0-9]{5,8}|138988)""",
+                        regexPattern = """(?i)(?:SN|S/N)?[:= ]*([0-9]{5,8}|1389998|138998|13899B|138988)""",
                         prefixToRemove = "SN",
-                        description = "ספות ומיטות טיפול ובדיקה יצרן SEERS MEDICAL (דגם SM2560)",
+                        description = "ספות ומיטות טיפול ובדיקה יצרן SEERS MEDICAL (דגם SM2560 - SN 1389998)",
                         isActive = true
                     ),
                     ParsingRule(
@@ -110,8 +116,8 @@ abstract class EquipmentDatabase : RoomDatabase() {
                 val sampleItems = listOf(
                     EquipmentItem(
                         inventoryNumber = "940100",
-                        rawManufacturerBarcode = "SEERS MEDICAL LTD|MODEL:SM2560|SN:138988|REF:SM2560-TMO-1WF",
-                        serialNumber = "138988",
+                        rawManufacturerBarcode = "SEERS MEDICAL LTD|MODEL:SM2560|SN:1389998|REF:SM2560-TMO-1WF",
+                        serialNumber = "1389998",
                         manufacturerName = "SEERS MEDICAL LTD.",
                         equipmentType = "מיטת בדיקה וטיפול (Medicare 2 Section)",
                         department = "מרפאות חוץ / בדיקות",
@@ -152,6 +158,36 @@ abstract class EquipmentDatabase : RoomDatabase() {
                         nextSafetyTestDate = "2027-08-05",
                         notes = "מכשיר מחובר לעגלת ניוד",
                         status = "מאושר ומודפס"
+                    ),
+                    EquipmentItem(
+                        inventoryNumber = "940103",
+                        rawManufacturerBarcode = "SN:ECG-7712039",
+                        serialNumber = "ECG-7712039",
+                        manufacturerName = "Schiller",
+                        equipmentType = "מכשיר א.ק.ג (ECG)",
+                        department = "קרדיולוגיה",
+                        safetyStickerId = "",
+                        testerName = "",
+                        registrationDate = "2026-08-06 09:00",
+                        safetyTestDate = "",
+                        nextSafetyTestDate = "",
+                        notes = "נרשם במאגר, ממתין לביצוע בדיקת בטיחות חשמל תקופתית",
+                        status = "ממתין לבדיקה"
+                    ),
+                    EquipmentItem(
+                        inventoryNumber = "940104",
+                        rawManufacturerBarcode = "SN:DEF-500219",
+                        serialNumber = "DEF-500219",
+                        manufacturerName = "Zoll",
+                        equipmentType = "דפיברילטור נייד",
+                        department = "חדר טראומה",
+                        safetyStickerId = "ELEC-2024-1102",
+                        testerName = "אלון שרון",
+                        registrationDate = "2024-05-10 08:20",
+                        safetyTestDate = "2024-05-10",
+                        nextSafetyTestDate = "2025-05-10",
+                        notes = "בדיקת בטיחות פגה בתאריך 10/05/2025 - חובה להזמין בדיקה דחופה",
+                        status = "פג תוקף בדיקה"
                     )
                 )
                 for (item in sampleItems) {

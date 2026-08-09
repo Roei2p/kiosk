@@ -2,18 +2,18 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// High-Contrast Luminous Primary Medical Palette
-val HighDensityPrimary = Color(0xFF0052CC) // Vibrant Royal Blue
+// High-Contrast Luminous Primary Medical Palette matching Clalit 30-Year Logo Colors
+val HighDensityPrimary = Color(0xFF00839B) // Vibrant Clalit Medical Teal/Cyan from logo
 val HighDensityOnPrimary = Color(0xFFFFFFFF) // Pure White
-val HighDensityPrimaryContainer = Color(0xFFE8F1FF) // Bright Soft Blue Tint
-val HighDensityOnPrimaryContainer = Color(0xFF001E4D) // Deep High-Contrast Navy
+val HighDensityPrimaryContainer = Color(0xFFE2F4F7) // Bright Soft Cyan/Teal Tint
+val HighDensityOnPrimaryContainer = Color(0xFF003844) // Deep High-Contrast Teal Navy
 
-val HighDensityDarkBlue = Color(0xFF0A2540) // Clean Header Navy
+val HighDensityDarkBlue = Color(0xFF003340) // Clean Deep Teal Navy Header
 val HighDensityOnDarkBlue = Color(0xFFFFFFFF)
 
-val HighDensitySuccess = Color(0xFF0D6338) // High-contrast Emerald
-val HighDensitySuccessContainer = Color(0xFFE6F4EA)
-val HighDensityOnSuccessContainer = Color(0xFF023218)
+val HighDensitySuccess = Color(0xFF00A859) // Vibrant Clalit Emerald Green from logo
+val HighDensitySuccessContainer = Color(0xFFE5F7ED)
+val HighDensityOnSuccessContainer = Color(0xFF00381B)
 
 val HighDensityWarning = Color(0xFFB25900) // High-contrast Warning Orange
 val HighDensityWarningContainer = Color(0xFFFFF0E6)

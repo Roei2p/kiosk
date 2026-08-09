@@ -103,7 +103,7 @@ fun PrintPreviewCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "הציוד נרשם בהצלחה - מוכן ל-SAP!",
+                        text = "הציוד נרשם בהצלחה - מוכן לביקורת!",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = Color.White
                     )

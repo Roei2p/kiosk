@@ -28,6 +28,13 @@ enum class RegistrationStep {
     STEP_4_LABEL_PRINT_PREVIEW  // Step 4: Label Printing Integration & ZPL
 }
 
+enum class LabelRecognitionMode(val displayName: String, val description: String) {
+    AUTO_SMART("זיהוי אוטומטי חכם (ברקוד / SN / טקסט חופשי)", "סורק ומפענח ברקודים, מקטעי SN, או מדבקות יצרן משולבות באופן אוטומטי"),
+    SEERS_BEDS_SPECIFIC("זיהוי מדבקת יצרן SEERS MEDICAL - מיטות וספות [SN 1389998]", "ברירת מחדל: מותאם במיוחד למדבקות יצרן SEERS Medical דגם SM2560 ומחלץ SN: 1389998"),
+    STRICT_SN_KEYWORD("זיהוי לפי מילת מפתח SN / S/N בלבד", "מחלץ רק מספרים וערכים המופיעים בצמוד למילים SN, S/N, או SERIAL"),
+    BARCODE_ONLY("סריקת ברקוד חומרה בלבד (ללא OCR טקסט)", "מתעלם מטקסט חופשי במצלמה ומסתמך אך ורק על סריקת ברקוד רשמית (1D/2D)")
+}
+
 class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: EquipmentRepository
@@ -74,6 +81,24 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _autoPairingEnabled = MutableStateFlow(true)
     val autoPairingEnabled: StateFlow<Boolean> = _autoPairingEnabled.asStateFlow()
+
+    // Global Label Recognition Mode Setting
+    private val _labelRecognitionMode = MutableStateFlow(
+        try {
+            LabelRecognitionMode.valueOf(
+                prefs.getString("label_rec_mode", LabelRecognitionMode.SEERS_BEDS_SPECIFIC.name)
+                    ?: LabelRecognitionMode.SEERS_BEDS_SPECIFIC.name
+            )
+        } catch (e: Exception) {
+            LabelRecognitionMode.SEERS_BEDS_SPECIFIC
+        }
+    )
+    val labelRecognitionMode: StateFlow<LabelRecognitionMode> = _labelRecognitionMode.asStateFlow()
+
+    fun setLabelRecognitionMode(mode: LabelRecognitionMode) {
+        _labelRecognitionMode.value = mode
+        prefs.edit().putString("label_rec_mode", mode.name).apply()
+    }
 
     // Calculated remaining in defined range
     val remainingInRange: StateFlow<Int> = combine(
