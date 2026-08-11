@@ -467,13 +467,13 @@ fun CameraBarcodeScannerModal(
 
                             Button(
                                 onClick = {
-                                    val finalVal = if (detectedBarcode.isNotEmpty()) detectedBarcode else detectedSn
+                                    val finalVal = if (detectedSn.isNotEmpty()) detectedSn else detectedBarcode
                                     onBarcodeScanned(finalVal)
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = HighDensitySuccess)
                             ) {
-                                Text("אשר והכנס לטופס", fontWeight = FontWeight.Bold)
+                                Text("אשר והכנס לטופס S/N", fontWeight = FontWeight.Bold)
                             }
                         }
                     }

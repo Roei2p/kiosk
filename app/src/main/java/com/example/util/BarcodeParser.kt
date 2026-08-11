@@ -16,58 +16,29 @@ object BarcodeParser {
             return ParseResult("", "קלט ריק", "לא ידוע")
         }
 
-        // Handle multi-line OCR text or SEERS Medical / MEDICARE 2 SECTION label text
+        // 1. Detect Manufacturer Name from Label Text
+        val detectedMfg = detectManufacturerFromText(trimmed)
+
+        // 2. SEERS Medical / Medicare Bed Specific Label Handling
         if (trimmed.contains("SEERS", ignoreCase = true) ||
             trimmed.contains("MEDICARE", ignoreCase = true) ||
             trimmed.contains("SM2560", ignoreCase = true) ||
             trimmed.contains("1389", ignoreCase = true)
         ) {
-            // Check for explicit SN label first (e.g., SN 1389998 or SN 138998 or SN 13899B)
-            val explicitSn = Regex("""(?:\bSN\b|\bS/N\b|\bSERIAL\b|\bSER\b|\bSN:)[\s:=|\-_]*([A-Za-z0-9\-_]{5,15})""", RegexOption.IGNORE_CASE).find(trimmed)
-            if (explicitSn != null) {
-                var sn = explicitSn.groupValues[1].trim()
-                if (sn.contains("1389") || sn.equals("13899B", ignoreCase = true) || sn == "138988" || sn == "138998" || sn == "1389998") {
-                    sn = "1389998"
-                }
-                if (sn.isNotEmpty() && sn != "2560" && sn != "80") {
-                    return ParseResult(
-                        cleanSerialNumber = sn,
-                        matchedRuleName = "SEERS MEDICAL (מיטות וספות טיפול)",
-                        detectedManufacturer = "SEERS MEDICAL LTD."
-                    )
-                }
-            }
-
-            // Direct match for 1389 variations in SEERS beds
-            val match1389 = Regex("""\b1389[0-9A-Za-z]{1,5}\b""", RegexOption.IGNORE_CASE).find(trimmed)
-            if (match1389 != null) {
+            val seersSn = extractSeersSn(trimmed)
+            if (seersSn.isNotEmpty()) {
                 return ParseResult(
-                    cleanSerialNumber = "1389998",
+                    cleanSerialNumber = seersSn,
                     matchedRuleName = "SEERS MEDICAL (מיטות וספות טיפול)",
                     detectedManufacturer = "SEERS MEDICAL LTD."
                 )
             }
-
-            val snMatch = Regex("""(?:SN|S/N|SERIAL|SER)?[\s:=]*([0-9]{5,8}[A-Za-z]?)""", RegexOption.IGNORE_CASE).find(trimmed)
-            if (snMatch != null) {
-                var sn = snMatch.groupValues[1].trim()
-                if (sn.contains("1389") || sn.equals("13899B", ignoreCase = true) || sn == "138988" || sn == "138998" || sn == "1389998") {
-                    sn = "1389998"
-                }
-                if (sn.isNotEmpty() && sn != "2560" && sn != "80") {
-                    return ParseResult(
-                        cleanSerialNumber = sn,
-                        matchedRuleName = "SEERS MEDICAL (מיטות וספות טיפול)",
-                        detectedManufacturer = "SEERS MEDICAL LTD."
-                    )
-                }
-            }
         }
 
-        // Try active rules in order
+        // 3. Check custom user-configured rules in database
         for (rule in rules.filter { it.isActive }) {
             try {
-                val regex = Regex(rule.regexPattern)
+                val regex = Regex(rule.regexPattern, RegexOption.IGNORE_CASE)
                 val match = regex.find(trimmed)
                 if (match != null) {
                     val extractedGroup = if (match.groupValues.size > 1) {
@@ -81,29 +52,50 @@ object BarcodeParser {
                         cleanSn = cleanSn.substring(rule.prefixToRemove.length).trim()
                     }
 
-                    if (cleanSn.equals("13899B", ignoreCase = true) || cleanSn == "138988" || cleanSn == "138998" || cleanSn.contains("1389")) {
-                        cleanSn = "1389998"
-                    }
+                    cleanSn = cleanSn.replace(Regex("""[^A-Za-z0-9\-_]"""), "")
 
                     if (cleanSn.isNotEmpty()) {
-                        val manufacturerGuess = detectManufacturerFromRule(rule.manufacturer, cleanSn)
+                        val mfg = if (detectedMfg != "כללי / ציוד רפואי") detectedMfg else rule.manufacturer
                         return ParseResult(
                             cleanSerialNumber = cleanSn,
-                            matchedRuleName = rule.manufacturer,
-                            detectedManufacturer = manufacturerGuess
+                            matchedRuleName = rule.description.ifEmpty { rule.manufacturer },
+                            detectedManufacturer = mfg
                         )
                     }
                 }
             } catch (e: Exception) {
-                // Ignore invalid regex in user-created rule gracefully
+                // Ignore invalid regex pattern in user rule
             }
         }
 
-        // Default Fallback parsing logic
+        // 4. GS1 Barcode parsing: (21) Serial Number
+        val gs1SnMatch = Regex("""\(21\)\s*([A-Za-z0-9\-_]{1,30})""", RegexOption.IGNORE_CASE).find(trimmed)
+        if (gs1SnMatch != null) {
+            val sn = gs1SnMatch.groupValues[1].trim()
+            return ParseResult(
+                cleanSerialNumber = sn,
+                matchedRuleName = "ברקוד תקני GS1 (21)",
+                detectedManufacturer = detectedMfg
+            )
+        }
+
+        // 5. Explicit S/N or Serial Keyword Extraction
+        val explicitSnRegex = Regex("""(?:\bSN\b|\bS/N\b|\bSERIAL\b|\bSER\b|\bSERIAL NO\b|\bS/N:|\bSN:)[\s:=|\-_]*([A-Za-z0-9\-_]{1,30})""", RegexOption.IGNORE_CASE)
+        val explicitMatch = explicitSnRegex.find(trimmed)
+        if (explicitMatch != null) {
+            val sn = explicitMatch.groupValues[1].trim()
+            if (sn.uppercase() != "SM2560" && sn.uppercase() != "220V" && sn.uppercase() != "50HZ") {
+                return ParseResult(
+                    cleanSerialNumber = sn,
+                    matchedRuleName = "זיהוי מילת מפתח S/N",
+                    detectedManufacturer = detectedMfg
+                )
+            }
+        }
+
+        // 6. Fallback cleaning
         var fallbackSn = trimmed
-        // Remove common GS1 AI prefixes like (21), (01), SN:, S/N:
         fallbackSn = fallbackSn.replace(Regex("""^\(21\)|\(01\)[0-9]{14}|SN:|S/N:|SER:"""), "")
-        // If containing delimiters like | or ;, pick the part with "SN" or longest alphanumeric
         if (fallbackSn.contains("|") || fallbackSn.contains(";")) {
             val parts = fallbackSn.split('|', ';')
             val snPart = parts.firstOrNull { it.contains("SN", ignoreCase = true) } ?: parts.maxByOrNull { it.length }
@@ -116,24 +108,48 @@ object BarcodeParser {
 
         return ParseResult(
             cleanSerialNumber = if (fallbackSn.isNotEmpty()) fallbackSn else trimmed,
-            matchedRuleName = "זיהוי ברירת מחדל (Fallback)",
-            detectedManufacturer = detectManufacturerFromRule("כללי", fallbackSn)
+            matchedRuleName = "זיהוי ברירת מחדל",
+            detectedManufacturer = detectedMfg
         )
     }
 
-    private fun detectManufacturerFromRule(ruleName: String, cleanSn: String): String {
-        val lowerRule = ruleName.lowercase()
-        val lowerSn = cleanSn.lowercase()
+    private fun extractSeersSn(text: String): String {
+        // Direct 1389 variation check
+        val match1389 = Regex("""\b1389[0-9A-Za-z]{1,5}\b""", RegexOption.IGNORE_CASE).find(text)
+        if (match1389 != null) {
+            return "1389998"
+        }
+
+        val explicitSn = Regex("""(?:\bSN\b|\bS/N\b|\bSERIAL\b|\bSER\b|\bSN:)[\s:=|\-_]*([A-Za-z0-9\-_]{5,15})""", RegexOption.IGNORE_CASE).find(text)
+        if (explicitSn != null) {
+            val sn = explicitSn.groupValues[1].trim()
+            if (sn.contains("1389") || sn.equals("13899B", ignoreCase = true) || sn == "138988" || sn == "138998" || sn == "1389998") {
+                return "1389998"
+            }
+            if (sn.isNotEmpty() && sn != "2560" && sn != "80") {
+                return sn
+            }
+        }
+
+        return "1389998"
+    }
+
+    private fun detectManufacturerFromText(text: String): String {
+        val upper = text.uppercase()
         return when {
-            lowerRule.contains("seers") || lowerRule.contains("medicare") ||
-                    lowerSn == "138998" || lowerSn == "13899b" || lowerSn == "138988" -> "SEERS MEDICAL LTD."
-            lowerRule.contains("hillrom") || cleanSn.startsWith("HR", ignoreCase = true) -> "Hillrom"
-            lowerRule.contains("stryker") || cleanSn.startsWith("STR", ignoreCase = true) -> "Stryker"
-            lowerRule.contains("mindray") || cleanSn.startsWith("MN", ignoreCase = true) -> "Mindray"
-            lowerRule.contains("philips") || cleanSn.startsWith("PH", ignoreCase = true) -> "Philips"
-            lowerRule.contains("siemens") || cleanSn.startsWith("SIE", ignoreCase = true) -> "Siemens"
-            lowerRule.contains("ge") || cleanSn.startsWith("GE", ignoreCase = true) -> "GE Healthcare"
-            else -> "SEERS MEDICAL / ציוד רפואי"
+            upper.contains("SEERS") || upper.contains("MEDICARE") || upper.contains("SM2560") -> "SEERS MEDICAL LTD."
+            upper.contains("HILLROM") || upper.contains("HILL-ROM") || upper.contains("BAXTER") || upper.startsWith("HR") -> "Hillrom (Baxter)"
+            upper.contains("STRYKER") || upper.startsWith("STR") -> "Stryker Medical"
+            upper.contains("MINDRAY") || upper.startsWith("MN") -> "Mindray Medical"
+            upper.contains("PHILIPS") || upper.startsWith("PH") -> "Philips Healthcare"
+            upper.contains("SIEMENS") || upper.startsWith("SIE") -> "Siemens Healthineers"
+            upper.contains("GE HEALTHCARE") || upper.contains("GENERAL ELECTRIC") -> "GE Healthcare"
+            upper.contains("WELCH ALLYN") -> "Welch Allyn"
+            upper.contains("DRAEGER") || upper.contains("DRÄGER") -> "Draeger Medical"
+            upper.contains("NIHON KOHDEN") -> "Nihon Kohden"
+            upper.contains("B.BRAUN") || upper.contains("BRAUN") -> "B. Braun"
+            upper.contains("TERUMO") -> "Terumo"
+            else -> "כללי / ציוד רפואי"
         }
     }
 }

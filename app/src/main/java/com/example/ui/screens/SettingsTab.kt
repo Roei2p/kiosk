@@ -71,9 +71,24 @@ import com.example.ui.theme.HighDensitySuccess
 import com.example.ui.viewmodel.KioskViewModel
 import com.example.util.SapCsvExporter
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.TextButton
+import com.example.data.model.ParsingRule
+import com.example.ui.components.CameraBarcodeScannerModal
 import com.example.ui.viewmodel.LabelRecognitionMode
+import com.example.util.BarcodeParser
 
 @Composable
 fun SettingsTab(
@@ -84,6 +99,173 @@ fun SettingsTab(
     val context = LocalContext.current
     val equipmentList by viewModel.filteredEquipmentList.collectAsState()
     val activeLabelMode by viewModel.labelRecognitionMode.collectAsState()
+    val rules by viewModel.parsingRules.collectAsState()
+
+    // Calibration & First Scan State inside Settings
+    var showCameraScanner by remember { mutableStateOf(false) }
+    var testScannedBarcode by remember { mutableStateOf("") }
+    var testParsedSn by remember { mutableStateOf("") }
+    var testDetectedMfr by remember { mutableStateOf("") }
+    var testMatchedRule by remember { mutableStateOf("") }
+
+    // Rule Editing & Creation Dialog States
+    var editingRule by remember { mutableStateOf<ParsingRule?>(null) }
+    var showAddRuleDialog by remember { mutableStateOf(false) }
+
+    // Fields for Add/Edit Rule Dialog
+    var ruleMfrInput by remember { mutableStateOf("") }
+    var ruleRegexInput by remember { mutableStateOf("") }
+    var rulePrefixInput by remember { mutableStateOf("") }
+    var ruleDescInput by remember { mutableStateOf("") }
+
+    val galleryPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val inputImage = com.google.mlkit.vision.common.InputImage.fromFilePath(context, uri)
+                val barcodeScanner = com.google.mlkit.vision.barcode.BarcodeScanning.getClient()
+                val textRecognizer = com.google.mlkit.vision.text.TextRecognition.getClient(
+                    com.google.mlkit.vision.text.latin.TextRecognizerOptions.DEFAULT_OPTIONS
+                )
+                barcodeScanner.process(inputImage)
+                    .addOnSuccessListener { barcodes ->
+                        val foundBarcode = barcodes.firstOrNull()?.rawValue
+                        if (!foundBarcode.isNullOrEmpty()) {
+                            testScannedBarcode = foundBarcode
+                            val res = BarcodeParser.parseBarcode(foundBarcode, rules)
+                            testParsedSn = res.cleanSerialNumber
+                            testDetectedMfr = res.detectedManufacturer
+                            testMatchedRule = res.matchedRuleName
+                        } else {
+                            textRecognizer.process(inputImage)
+                                .addOnSuccessListener { visionText ->
+                                    if (visionText.text.isNotEmpty()) {
+                                        testScannedBarcode = visionText.text
+                                        val res = BarcodeParser.parseBarcode(visionText.text, rules)
+                                        testParsedSn = res.cleanSerialNumber
+                                        testDetectedMfr = res.detectedManufacturer
+                                        testMatchedRule = res.matchedRuleName
+                                    }
+                                }
+                        }
+                    }
+            } catch (e: Exception) { }
+        }
+    }
+
+    if (showCameraScanner) {
+        CameraBarcodeScannerModal(
+            onDismiss = { showCameraScanner = false },
+            onBarcodeScanned = { raw ->
+                testScannedBarcode = raw
+                val res = BarcodeParser.parseBarcode(raw, rules)
+                testParsedSn = res.cleanSerialNumber
+                testDetectedMfr = res.detectedManufacturer
+                testMatchedRule = res.matchedRuleName
+                showCameraScanner = false
+            }
+        )
+    }
+
+    // Dialog for Editing or Creating a Parsing Rule (תאפשר עריכה)
+    if (editingRule != null || showAddRuleDialog) {
+        val isEditing = editingRule != null
+        AlertDialog(
+            onDismissRequest = {
+                editingRule = null
+                showAddRuleDialog = false
+            },
+            title = {
+                Text(
+                    text = if (isEditing) "עריכת כלל זיהוי מדבקה" else "הוספת כלל זיהוי מדבקה חדש",
+                    fontWeight = FontWeight.Bold,
+                    color = HighDensityDarkBlue
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("שם יצרן / דגם מדבקה:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = ruleMfrInput,
+                        onValueChange = { ruleMfrInput = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        placeholder = { Text("לדוגמה: SEERS Medical / Mindray") }
+                    )
+
+                    Text("כלל חילוץ Regex / ביטוי סריקה:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = ruleRegexInput,
+                        onValueChange = { ruleRegexInput = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        placeholder = { Text("לדוגמה: 13[0-9]{5,7} או SN:?(\\w+)") }
+                    )
+
+                    Text("תחילית / מילת מפתח להסרה:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = rulePrefixInput,
+                        onValueChange = { rulePrefixInput = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        placeholder = { Text("לדוגמה: SN, S/N, (21)") }
+                    )
+
+                    Text("תיאור הכלל:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(
+                        value = ruleDescInput,
+                        onValueChange = { ruleDescInput = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        placeholder = { Text("תיאור קצר של מדבקת היצרן") }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (ruleMfrInput.isNotBlank()) {
+                            if (isEditing) {
+                                editingRule?.let { old ->
+                                    viewModel.updateParsingRule(
+                                        old.copy(
+                                            manufacturer = ruleMfrInput,
+                                            regexPattern = ruleRegexInput,
+                                            prefixToRemove = rulePrefixInput,
+                                            description = ruleDescInput
+                                        )
+                                    )
+                                    Toast.makeText(context, "הכלל עודכן בהצלחה", Toast.LENGTH_SHORT).show()
+                                }
+                            } else {
+                                viewModel.addNewParsingRule(
+                                    manufacturer = ruleMfrInput,
+                                    regex = ruleRegexInput,
+                                    prefix = rulePrefixInput,
+                                    desc = ruleDescInput
+                                )
+                                Toast.makeText(context, "כלל חדש נוצר בהצלחה", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        editingRule = null
+                        showAddRuleDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = HighDensityPrimary)
+                ) {
+                    Text("שמור", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    editingRule = null
+                    showAddRuleDialog = false
+                }) {
+                    Text("ביטול")
+                }
+            }
+        )
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -92,7 +274,160 @@ fun SettingsTab(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Section 1: Label Recognition Mode Settings (מצב הגדרת מדבקה / זיהוי מדבקת יצרן)
+        // --- NEW SECTION 1: FIRST SCAN & STICKER CALIBRATION IN SETTINGS ---
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, HighDensityPrimary)
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.QrCodeScanner,
+                                contentDescription = null,
+                                tint = HighDensityPrimary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "סריקה ראשונה לכיול וזיהוי מדבקה",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = HighDensityDarkBlue
+                            )
+                        }
+
+                        Surface(
+                            color = Color(0xFFE8F1FF),
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Text(
+                                text = "סריקת ניסיון",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = HighDensityPrimary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "בצע סריקת ראשונה במצלמה או מהגלריה כאן כדי לבדוק ולכייל את זיהוי מדבקת היצרן:",
+                        fontSize = 13.sp,
+                        color = Color(0xFF64748B)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = { showCameraScanner = true },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = HighDensityPrimary)
+                        ) {
+                            Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("סרוק במצלמה", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        OutlinedButton(
+                            onClick = { galleryPickerLauncher.launch("image/*") },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("בחר מהגלריה", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = HighDensityDarkBlue)
+                        }
+                    }
+
+                    // Display Live Scan Result inside Settings
+                    if (testScannedBarcode.isNotEmpty()) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color(0xFFF0FDFA),
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, HighDensitySuccess)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = HighDensitySuccess,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "תוצאת סריקה ראשונה וכיול:",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = HighDensityDarkBlue
+                                    )
+                                }
+
+                                Text(
+                                    text = "• ברקוד גולמי: $testScannedBarcode",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF334155)
+                                )
+                                Text(
+                                    text = "• SN מפוענח: ${testParsedSn.ifEmpty { "לא פוענח SN - נדרש התאמת כלל" }}",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = HighDensityPrimary
+                                )
+                                Text(
+                                    text = "• יצרן מזוהה: $testDetectedMfr",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF475569)
+                                )
+                                Text(
+                                    text = "• כלל שנשאר: $testMatchedRule",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF64748B)
+                                )
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                Button(
+                                    onClick = {
+                                        viewModel.onScanManufacturerBarcode(testScannedBarcode)
+                                        Toast.makeText(context, "הסריקה הוחלה בהצלחה על המסך הראשי!", Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = HighDensityDarkBlue)
+                                ) {
+                                    Text("החל סריקה זו על המסך הראשי", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Section 2: Label Recognition Mode Settings (מצב הגדרת מדבקה / זיהוי מדבקת יצרן)
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -119,7 +454,7 @@ fun SettingsTab(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "זיהוי מדבקת יצרן והגדרת סריקה",
+                                text = "מצב זיהוי מדבקת יצרן גלובלי",
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = HighDensityDarkBlue
@@ -209,7 +544,144 @@ fun SettingsTab(
             }
         }
 
-        // Section 2: Share & Export Reports Card
+        // --- NEW SECTION 3: EDITABLE PARSING & STICKER RULES ("תאפשר עריכה") ---
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                tint = HighDensityDarkBlue,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "עריכת כללי זיהוי ומדבקות יצרן",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = HighDensityDarkBlue
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                ruleMfrInput = ""
+                                ruleRegexInput = ""
+                                rulePrefixInput = ""
+                                ruleDescInput = ""
+                                showAddRuleDialog = true
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = HighDensityPrimary),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("הוסף כלל", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Text(
+                        text = "ניתן לערוך ולהתאים אישית את כללי הפענוח למדבקות השונות:",
+                        fontSize = 13.sp,
+                        color = Color(0xFF64748B)
+                    )
+
+                    rules.forEach { rule ->
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFFF8FAFC),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = rule.manufacturer,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = HighDensityDarkBlue
+                                        )
+                                        if (rule.prefixToRemove.isNotBlank()) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                color = Color(0xFFE2E8F0),
+                                                shape = RoundedCornerShape(4.dp)
+                                            ) {
+                                                Text(
+                                                    text = "Prefix: ${rule.prefixToRemove}",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF475569),
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = rule.description,
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF64748B)
+                                    )
+                                    Text(
+                                        text = "Regex: ${rule.regexPattern}",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFF94A3B8)
+                                    )
+                                }
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(onClick = {
+                                        editingRule = rule
+                                        ruleMfrInput = rule.manufacturer
+                                        ruleRegexInput = rule.regexPattern
+                                        rulePrefixInput = rule.prefixToRemove
+                                        ruleDescInput = rule.description
+                                    }) {
+                                        Icon(Icons.Default.Edit, contentDescription = "ערוך", tint = HighDensityPrimary, modifier = Modifier.size(20.dp))
+                                    }
+
+                                    IconButton(onClick = {
+                                        viewModel.deleteParsingRule(rule)
+                                        Toast.makeText(context, "כלל נמחק", Toast.LENGTH_SHORT).show()
+                                    }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "מחק", tint = Color(0xFFEF4444), modifier = Modifier.size(20.dp))
+                                    }
+
+                                    Switch(
+                                        checked = rule.isActive,
+                                        onCheckedChange = { viewModel.toggleRuleActive(rule) },
+                                        modifier = Modifier.padding(start = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Section 4: Share & Export Reports Card
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),

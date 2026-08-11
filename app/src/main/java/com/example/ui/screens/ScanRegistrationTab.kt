@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -30,18 +31,26 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.ConfirmationNumber
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ElectricBolt
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material.icons.filled.VerifiedUser
+import android.widget.Toast
+import com.example.data.model.EquipmentItem
+import com.example.ui.theme.HighDensitySuccessContainer
+import com.example.ui.theme.HighDensityOnSuccessContainer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -144,7 +153,12 @@ fun ScanRegistrationTab(
     val currentInvCounter by viewModel.currentInvCounter.collectAsState()
     val remainingInRange by viewModel.remainingInRange.collectAsState()
 
+    val isRapidScanMode by viewModel.isRapidScanMode.collectAsState()
+    val lastSavedNotification by viewModel.lastSavedNotification.collectAsState()
+
     var showCameraModal by remember { mutableStateOf(false) }
+    var editingEquipmentItem by remember { mutableStateOf<EquipmentItem?>(null) }
+    var deletingEquipmentItem by remember { mutableStateOf<EquipmentItem?>(null) }
     val barcodeFocusRequester = remember { FocusRequester() }
 
     val context = LocalContext.current
@@ -186,6 +200,137 @@ fun ScanRegistrationTab(
         )
     }
 
+    // --- EDIT EQUIPMENT ITEM DIALOG ---
+    editingEquipmentItem?.let { item ->
+        var editInv by remember(item) { mutableStateOf(item.inventoryNumber) }
+        var editSn by remember(item) { mutableStateOf(item.serialNumber) }
+        var editMfr by remember(item) { mutableStateOf(item.manufacturerName) }
+        var editType by remember(item) { mutableStateOf(item.equipmentType) }
+        var editDept by remember(item) { mutableStateOf(item.department) }
+        var editNotes by remember(item) { mutableStateOf(item.notes) }
+
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { editingEquipmentItem = null },
+            title = {
+                Text(
+                    text = "עריכת פרטי פריט #${item.inventoryNumber}",
+                    fontWeight = FontWeight.Bold,
+                    color = HighDensityDarkBlue
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = editInv,
+                        onValueChange = { editInv = it },
+                        label = { Text("מספר אינוונטר") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editSn,
+                        onValueChange = { editSn = it },
+                        label = { Text("מספר סידורי (S/N)") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editMfr,
+                        onValueChange = { editMfr = it },
+                        label = { Text("שם יצרן") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editType,
+                        onValueChange = { editType = it },
+                        label = { Text("סוג ציוד") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editDept,
+                        onValueChange = { editDept = it },
+                        label = { Text("מחלקה") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editNotes,
+                        onValueChange = { editNotes = it },
+                        label = { Text("הערות") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val updated = item.copy(
+                            inventoryNumber = editInv,
+                            serialNumber = editSn,
+                            manufacturerName = editMfr,
+                            equipmentType = editType,
+                            department = editDept,
+                            notes = editNotes
+                        )
+                        viewModel.updateEquipmentItem(updated)
+                        Toast.makeText(context, "הפריט עודכן בהצלחה", Toast.LENGTH_SHORT).show()
+                        editingEquipmentItem = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = HighDensityPrimary)
+                ) {
+                    Text("שמור שינויים", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingEquipmentItem = null }) {
+                    Text("ביטול")
+                }
+            }
+        )
+    }
+
+    // --- DELETE CONFIRMATION DIALOG ---
+    deletingEquipmentItem?.let { item ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { deletingEquipmentItem = null },
+            title = {
+                Text(
+                    text = "מחיקת פריט מהמאגר",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+            },
+            text = {
+                Text(
+                    text = "האם אתה בטוח שברצונך למחוק את פריט אינוונטר #${item.inventoryNumber} (S/N: ${item.serialNumber})? הפריט יוסר לצמיתות ממאגר הנתונים.",
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteEquipment(item)
+                        Toast.makeText(context, "פריט #${item.inventoryNumber} נמחק מהמאגר", Toast.LENGTH_SHORT).show()
+                        deletingEquipmentItem = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("מחק פריט", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { deletingEquipmentItem = null }) {
+                    Text("ביטול")
+                }
+            }
+        )
+    }
+
     Column(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         // Step Header Bar
         StepHeader(
@@ -215,7 +360,11 @@ fun ScanRegistrationTab(
                         rangeEndNum = rangeEndNum,
                         currentInvCounter = currentInvCounter,
                         remainingInRange = remainingInRange,
+                        isRapidScanMode = isRapidScanMode,
+                        lastSavedNotification = lastSavedNotification,
                         barcodeFocusRequester = barcodeFocusRequester,
+                        onRapidScanModeToggle = { enabled -> viewModel.setRapidScanMode(enabled) },
+                        onClearNotification = { viewModel.clearSavedNotification() },
                         onBarcodeChange = { raw -> viewModel.onScanManufacturerBarcode(raw) },
                         onParsedSnChange = { sn -> viewModel.setParsedSn(sn) },
                         onManufacturerChange = { mfr -> viewModel.setManufacturerName(mfr) },
@@ -228,11 +377,12 @@ fun ScanRegistrationTab(
                         onOpenRangeDialog = onOpenRangeDialog,
                         onSaveAndApprove = {
                             viewModel.saveAndApproveEquipment()
-                            SapCsvExporter.exportAndShareExcelCsv(context, viewModel.allEquipmentList.value)
                         },
                         onExportExcelDirect = {
                             SapCsvExporter.exportAndShareExcelCsv(context, allEquipmentList)
                         },
+                        onEditItem = { item -> editingEquipmentItem = item },
+                        onDeleteItem = { item -> deletingEquipmentItem = item },
                         onNextClick = { viewModel.setStep(RegistrationStep.STEP_2_ASSIGN_INVENTORY) }
                     )
                 }
@@ -324,7 +474,11 @@ private fun Step1ScanManufacturerContent(
     rangeEndNum: Int,
     currentInvCounter: Int,
     remainingInRange: Int,
+    isRapidScanMode: Boolean,
+    lastSavedNotification: String?,
     barcodeFocusRequester: FocusRequester,
+    onRapidScanModeToggle: (Boolean) -> Unit,
+    onClearNotification: () -> Unit,
     onBarcodeChange: (String) -> Unit,
     onParsedSnChange: (String) -> Unit,
     onManufacturerChange: (String) -> Unit,
@@ -337,6 +491,8 @@ private fun Step1ScanManufacturerContent(
     onOpenRangeDialog: () -> Unit,
     onSaveAndApprove: () -> Unit,
     onExportExcelDirect: () -> Unit,
+    onEditItem: (com.example.data.model.EquipmentItem) -> Unit,
+    onDeleteItem: (com.example.data.model.EquipmentItem) -> Unit,
     onNextClick: () -> Unit
 ) {
     val scrollState = rememberScrollState()
@@ -350,89 +506,219 @@ private fun Step1ScanManufacturerContent(
             .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // PROMINENT TOP CARD FOR INVENTORY RANGE DEFINITION
+        // FLOATING SUCCESS TOAST BANNER FOR RAPID CONTINUOUS SCANNING
+        if (!lastSavedNotification.isNullOrBlank()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = HighDensitySuccessContainer),
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, HighDensitySuccess),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = HighDensitySuccess,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = lastSavedNotification,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = HighDensityOnSuccessContainer
+                        )
+                    }
+                    IconButton(
+                        onClick = onClearNotification,
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "סגור",
+                            tint = HighDensitySuccess,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // PROMINENT TOP CARD FOR INVENTORY RANGE & RAPID SCAN SETUP
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = HighDensityDarkBlue),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.ConfirmationNumber,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.ConfirmationNumber,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "הגדרת טווח וסריקה ברצף",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "הגדרת טווח אינוונטרים",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            text = "טווח מוגדר: $inventoryPrefix$rangeStartNum .. $inventoryPrefix$rangeEndNum | הבא: $inventoryPrefix$currentInvCounter (נותרו: $remainingInRange)",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White.copy(alpha = 0.85f)
                         )
                     }
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "טווח מוגדר: $inventoryPrefix$rangeStartNum .. $inventoryPrefix$rangeEndNum | הבא: $inventoryPrefix$currentInvCounter (נותרו: $remainingInRange)",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.White.copy(alpha = 0.85f)
-                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Button(
+                        onClick = onOpenRangeDialog,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = HighDensityPrimary,
+                            contentColor = Color.White
+                        ),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "הגדר טווח",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.2f), thickness = 1.dp)
 
-                Button(
-                    onClick = onOpenRangeDialog,
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = HighDensityPrimary,
-                        contentColor = Color.White
-                    ),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                // Rapid Scan Mode Toggle Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Settings, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "הגדר טווח",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.QrCodeScanner,
+                            contentDescription = null,
+                            tint = if (isRapidScanMode) HighDensitySuccess else Color.LightGray,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "סריקה מהירה ברצף (Rapid Batch Scan)",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "שומר ישירות למאגר ומקדם אינוונטר ללא חלונות קופצים",
+                                fontSize = 10.sp,
+                                color = Color.White.copy(alpha = 0.75f)
+                            )
+                        }
+                    }
+
+                    androidx.compose.material3.Switch(
+                        checked = isRapidScanMode,
+                        onCheckedChange = onRapidScanModeToggle,
+                        colors = androidx.compose.material3.SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = HighDensitySuccess,
+                            uncheckedThumbColor = Color.LightGray,
+                            uncheckedTrackColor = Color.DarkGray
+                        )
                     )
                 }
             }
         }
 
-        // 1. הצעת סריקת ברקוד / מדבקת יצרן (Front Offer)
+        // 1. Unified Barcode & Serial Number Registration Card
         Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            shape = RoundedCornerShape(12.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.5.dp, if (parsedSn.isNotEmpty()) HighDensitySuccess else HighDensityPrimary.copy(alpha = 0.4f), RoundedCornerShape(14.dp)),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "1. הצעת סריקת הברקוד ומדבקת היצרן:",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = HighDensityDarkBlue
-                )
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Header & Camera/Gallery Scan Actions
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.QrCodeScanner,
+                            contentDescription = null,
+                            tint = HighDensityPrimary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "זיהוי ורישום ציוד",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = HighDensityDarkBlue
+                        )
+                    }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                    if (matchedRuleName.isNotEmpty()) {
+                        Surface(
+                            color = HighDensityPrimary.copy(alpha = 0.12f),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = matchedRuleName,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = HighDensityPrimary,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+                }
 
+                // Action Buttons for Camera & Gallery
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = onOpenCamera,
                         modifier = Modifier
                             .weight(1f)
-                            .height(46.dp),
+                            .height(44.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = HighDensityPrimary),
                         shape = RoundedCornerShape(10.dp)
                     ) {
@@ -445,7 +731,7 @@ private fun Step1ScanManufacturerContent(
                         onClick = onUploadGallery,
                         modifier = Modifier
                             .weight(1f)
-                            .height(46.dp),
+                            .height(44.dp),
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Icon(Icons.Default.Image, contentDescription = null, tint = HighDensityPrimary, modifier = Modifier.size(18.dp))
@@ -454,114 +740,178 @@ private fun Step1ScanManufacturerContent(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = rawBarcode,
-                    onValueChange = onBarcodeChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("הקלידו או סרקו ברקוד מקורי מתוך הצעת המכשיר...") },
-                    leadingIcon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = HighDensityPrimary) },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = HighDensityPrimary,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    )
-                )
-            }
-        }
-
-        // DIVIDER LINE 1: Between filtered data and definition confirmation
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            HorizontalDivider(modifier = Modifier.weight(1f), color = HighDensityPrimary.copy(alpha = 0.4f), thickness = 1.dp)
-            Surface(
-                color = HighDensityPrimary.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.padding(horizontal = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = HighDensityPrimary, modifier = Modifier.size(15.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "נתונים מסוננים ומפוענחים בהתאם להגדרה הראשונית",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = HighDensityDarkBlue
-                    )
-                }
-            }
-            HorizontalDivider(modifier = Modifier.weight(1f), color = HighDensityPrimary.copy(alpha = 0.4f), thickness = 1.dp)
-        }
-
-        // 2. אישור הנתונים המסוננים
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.5.dp, HighDensityPrimary, RoundedCornerShape(12.dp)),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "2. אישור ואימות נתוני הציוד שהוצעו:",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = HighDensityPrimary
-                    )
-
-                    if (matchedRuleName.isNotEmpty()) {
-                        Surface(
-                            color = HighDensityPrimary.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(6.dp)
+                // S/N DETECTION SUCCESS BANNER WITH DIRECT SAVE ACTION
+                if (parsedSn.isNotEmpty()) {
+                    Surface(
+                        color = Color(0xFFF0FDFA),
+                        border = BorderStroke(1.5.dp, HighDensitySuccess),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Text(
-                                text = "כלל: $matchedRuleName",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = HighDensityPrimary,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = HighDensitySuccess,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            text = "זיהוי מספר סידורי (S/N) בוצע בהצלחה!",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = HighDensitySuccess
+                                        )
+                                        Text(
+                                            text = "מספר סידורי: $parsedSn",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontFamily = FontFamily.Monospace,
+                                            color = HighDensityDarkBlue
+                                        )
+                                        Text(
+                                            text = "משויך לאינוונטר: $inventoryNumber | יצרן: ${manufacturerName.ifEmpty { "SEERS / כללי" }}",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                TextButton(
+                                    onClick = {
+                                        onParsedSnChange("")
+                                        onBarcodeChange("")
+                                    },
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(4.dp)
+                                ) {
+                                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(2.dp))
+                                    Text("ניקוי", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            // DIRECT SAVE & REGISTER BUTTON IN BANNER
+                            Button(
+                                onClick = onSaveAndApprove,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(46.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = HighDensitySuccess)
+                            ) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "שמירה ואישור פריט $inventoryNumber במלאי (S/N: $parsedSn)",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
 
+                HorizontalDivider(color = Color(0xFFE2E8F0), thickness = 1.dp)
+
+                // SERIAL NUMBER FIELD (ALWAYS EDITABLE)
                 OutlinedTextField(
                     value = parsedSn,
                     onValueChange = onParsedSnChange,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("מספר סדורי שזוהה (S/N)") },
+                    label = { Text("מספר סידורי מפורש (S/N)", fontWeight = FontWeight.Bold) },
+                    placeholder = { Text("הקלידו או סרקו S/N (למשל: 1389998)") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.VerifiedUser,
+                            contentDescription = null,
+                            tint = if (parsedSn.isNotEmpty()) HighDensitySuccess else HighDensityPrimary
+                        )
+                    },
+                    trailingIcon = {
+                        IconButton(
+                            onClick = {
+                                onParsedSnChange("")
+                                onBarcodeChange("")
+                            },
+                            enabled = parsedSn.isNotEmpty()
+                        ) {
+                            if (parsedSn.isNotEmpty()) {
+                                Icon(Icons.Default.Close, contentDescription = "ניקוי", modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     textStyle = MaterialTheme.typography.titleMedium.copy(
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
                         color = HighDensityDarkBlue
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = HighDensityPrimary,
+                        unfocusedBorderColor = if (parsedSn.isNotEmpty()) HighDensitySuccess else Color(0xFFCBD5E1)
                     )
                 )
 
+                // MANUFACTURER NAME FIELD
                 OutlinedTextField(
                     value = manufacturerName,
                     onValueChange = onManufacturerChange,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("שם יצרן") },
+                    label = { Text("שם יצרן / מותג") },
+                    placeholder = { Text("למשל: SEERS MEDICAL, Hillrom, Mindray...") },
                     singleLine = true,
-                    placeholder = { Text("Stryker, Mindray, Siemens...") }
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = HighDensityPrimary,
+                        unfocusedBorderColor = Color(0xFFCBD5E1)
+                    )
                 )
 
+                HorizontalDivider(color = Color(0xFFE2E8F0), thickness = 1.dp)
+
+                // INVENTORY NUMBER & GENERATE NEXT
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = inventoryNumber,
+                        onValueChange = onInventoryNumberChange,
+                        modifier = Modifier.weight(1f),
+                        label = { Text("מספר אינוונטר מוקצה") },
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.titleMedium.copy(
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            color = HighDensityDarkBlue
+                        )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    OutlinedButton(
+                        onClick = onGenerateNextInv,
+                        modifier = Modifier.height(54.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("הבא בטווח", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                // EQUIPMENT TYPE & DEPARTMENT
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -624,150 +974,115 @@ private fun Step1ScanManufacturerContent(
                         }
                     }
                 }
-            }
-        }
 
-        // DIVIDER LINE 2: Between confirmed data and inventory range numbers
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            HorizontalDivider(modifier = Modifier.weight(1f), color = HighDensitySuccess.copy(alpha = 0.4f), thickness = 1.dp)
-            Surface(
-                color = HighDensitySuccess.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.padding(horizontal = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.ConfirmationNumber, contentDescription = null, tint = HighDensitySuccess, modifier = Modifier.size(15.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "שיוך מספר אינוונטר מתוך הטווח המוגדר",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = HighDensitySuccess
-                    )
-                }
-            }
-            HorizontalDivider(modifier = Modifier.weight(1f), color = HighDensitySuccess.copy(alpha = 0.4f), thickness = 1.dp)
-        }
-
-        // 3. שיוך מספר אינוונטר וייצוא לאקסל (Excel)
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = "3. שיוך מספר אינוונטר וייצוא קובץ אקסל:",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = HighDensityDarkBlue
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = inventoryNumber,
-                        onValueChange = onInventoryNumberChange,
-                        modifier = Modifier.weight(1f),
-                        label = { Text("מספר אינוונטר מוקצה") },
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.titleMedium.copy(
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            color = HighDensityDarkBlue
-                        )
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    TextButton(onClick = onGenerateNextInv) {
-                        Text("הבא בטווח", fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                // Primary Action Button: Save & Export to Excel
+                // SAVE & APPROVE ITEM BUTTON
                 Button(
                     onClick = onSaveAndApprove,
-                    enabled = parsedSn.isNotEmpty() || rawBarcode.isNotEmpty(),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
+                        .height(50.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = HighDensitySuccess)
                 ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(22.dp))
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("אישור, קליטה וייצוא לאקסל (Excel)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("אישור ורישום פריט זה במלאי", fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
 
-                // Direct Excel Export Button
+                // MANUAL EXCEL EXPORT BUTTON
                 OutlinedButton(
                     onClick = onExportExcelDirect,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(46.dp),
-                    shape = RoundedCornerShape(10.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
                 ) {
-                    Icon(Icons.Default.TableChart, contentDescription = null, tint = HighDensityPrimary, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("הורד / שתף קובץ Excel ($recentCount פריטים שנרשמו)", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = HighDensityPrimary)
+                    Icon(Icons.Default.TableChart, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("שתף קובץ Excel ($recentCount פריטים רשומים)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
 
-        // 4. פרמטרים והגדרות טבלה (רוחב טבלה, תבנית, ופורמטים)
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { showTableParams = !showTableParams },
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Settings, contentDescription = null, tint = HighDensityDarkBlue, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "פרמטרים והגדרות טבלה (רוחב, תבנית ייצוא)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = HighDensityDarkBlue
-                        )
-                    }
-                    Text(if (showTableParams) "הסתר ▲" else "הצג ▼", fontSize = 12.sp, color = HighDensityPrimary, fontWeight = FontWeight.Bold)
-                }
-
-                AnimatedVisibility(visible = showTableParams) {
-                    Column(
-                        modifier = Modifier.padding(top = 10.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+        // 4. פריטים שנרשמו במערכת (עם אפשרות עריכה ומחיקה ישירה)
+        if (allEquipmentList.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Inventory2, contentDescription = null, tint = HighDensityPrimary, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "פריטים שנרשמו במערכת (${allEquipmentList.size})",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = HighDensityDarkBlue
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    allEquipmentList.take(5).forEach { item ->
                         Surface(
-                            color = MaterialTheme.colorScheme.surface,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
                             shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            border = BorderStroke(1.dp, Color(0xFFE2E8F0))
                         ) {
-                            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text("• רוחב עמודות טבלה: Auto-Fit (120% מותאם לעברית)", fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                                Text("• תבנית ייצוא: Excel / CSV Standard (אינוונטר, S/N, יצרן, סוג, מחלקה, תאריך)", fontSize = 12.sp)
-                                Text("• קידוד קובץ: UTF-8 with BOM (פתיחה תקינה מיידית ב-Microsoft Excel)", fontSize = 12.sp)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "אינוונטר: ${item.inventoryNumber} | S/N: ${item.serialNumber}",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = HighDensityDarkBlue
+                                    )
+                                    Text(
+                                        text = "${item.manufacturerName} • ${item.equipmentType} • ${item.department}",
+                                        fontSize = 11.sp,
+                                        color = Color.Gray
+                                    )
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    IconButton(
+                                        onClick = { onEditItem(item) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "ערוך פריט",
+                                            tint = HighDensityPrimary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { onDeleteItem(item) },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "מחק פריט",
+                                            tint = MaterialTheme.colorScheme.error,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

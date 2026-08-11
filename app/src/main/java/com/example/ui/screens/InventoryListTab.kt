@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ElectricBolt
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FilterList
@@ -187,6 +189,8 @@ fun InventoryListTab(
     var showAnalyticsCharts by remember { mutableStateOf(true) }
     var selectedItemIds by remember { mutableStateOf(setOf<Int>()) }
     var showClearAllConfirmDialog by remember { mutableStateOf(false) }
+    var editingEquipmentItem by remember { mutableStateOf<EquipmentItem?>(null) }
+    var deletingEquipmentItem by remember { mutableStateOf<EquipmentItem?>(null) }
 
     val deptFilters = remember {
         listOf("הכל") + DEPARTMENTS
@@ -273,6 +277,170 @@ fun InventoryListTab(
             },
             dismissButton = {
                 OutlinedButton(onClick = { showClearAllConfirmDialog = false }) {
+                    Text("ביטול")
+                }
+            }
+        )
+    }
+
+    // Delete Single Equipment Item Dialog
+    deletingEquipmentItem?.let { item ->
+        AlertDialog(
+            onDismissRequest = { deletingEquipmentItem = null },
+            title = {
+                Text(
+                    text = "מחיקת פריט מאינוונטר",
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error
+                )
+            },
+            text = {
+                Text("האם אתה בטוח שברצונך למחוק את פריט אינוונטר #${item.inventoryNumber} (S/N: ${item.serialNumber})? פעולה זו אינה ניתנית לבטול.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteEquipment(item)
+                        deletingEquipmentItem = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("אישור מחיקת פריט", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { deletingEquipmentItem = null }) {
+                    Text("ביטול")
+                }
+            }
+        )
+    }
+
+    // Edit Equipment Item Dialog
+    editingEquipmentItem?.let { item ->
+        var editInv by remember(item) { mutableStateOf(item.inventoryNumber) }
+        var editSn by remember(item) { mutableStateOf(item.serialNumber) }
+        var editMfr by remember(item) { mutableStateOf(item.manufacturerName) }
+        var editType by remember(item) { mutableStateOf(item.equipmentType) }
+        var editDept by remember(item) { mutableStateOf(item.department) }
+        var editSafetySticker by remember(item) { mutableStateOf(item.safetyStickerId) }
+        var editTester by remember(item) { mutableStateOf(item.testerName) }
+        var editNextTestDate by remember(item) { mutableStateOf(item.nextSafetyTestDate) }
+
+        AlertDialog(
+            onDismissRequest = { editingEquipmentItem = null },
+            title = {
+                Text(
+                    text = "עריכת פרטי ציוד #${item.inventoryNumber}",
+                    fontWeight = FontWeight.Bold,
+                    color = HighDensityDarkBlue
+                )
+            },
+            text = {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.height(350.dp)
+                ) {
+                    item {
+                        Text("מספר אינוונטר מוקצה:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = editInv,
+                            onValueChange = { editInv = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                    item {
+                        Text("מספר סידורי S/N:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = editSn,
+                            onValueChange = { editSn = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                    item {
+                        Text("שם יצרן:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = editMfr,
+                            onValueChange = { editMfr = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                    item {
+                        Text("סוג ציוד:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = editType,
+                            onValueChange = { editType = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                    item {
+                        Text("מחלקה:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = editDept,
+                            onValueChange = { editDept = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                    item {
+                        Text("מספר מדבקת בטיחות חשמל:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = editSafetySticker,
+                            onValueChange = { editSafetySticker = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            placeholder = { Text("לדוגמה: ELEC-99238") }
+                        )
+                    }
+                    item {
+                        Text("שם בודק מוסמך:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = editTester,
+                            onValueChange = { editTester = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true
+                        )
+                    }
+                    item {
+                        Text("תאריך בדיקה הבאה (YYYY-MM-DD):", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        OutlinedTextField(
+                            value = editNextTestDate,
+                            onValueChange = { editNextTestDate = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            placeholder = { Text("2026-12-31") }
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val updated = item.copy(
+                            inventoryNumber = editInv,
+                            serialNumber = editSn,
+                            manufacturerName = editMfr,
+                            equipmentType = editType,
+                            department = editDept,
+                            safetyStickerId = editSafetySticker,
+                            testerName = editTester,
+                            nextSafetyTestDate = editNextTestDate
+                        )
+                        viewModel.updateEquipmentItem(updated)
+                        Toast.makeText(context, "פרטי הציוד עודכנו בהצלחה", Toast.LENGTH_SHORT).show()
+                        editingEquipmentItem = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = HighDensityPrimary)
+                ) {
+                    Text("שמור שינויים", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingEquipmentItem = null }) {
                     Text("ביטול")
                 }
             }
@@ -973,8 +1141,9 @@ fun InventoryListTab(
                                 selectedItemIds + item.id
                             }
                         },
+                        onEditClick = { editingEquipmentItem = item },
                         onPrintLabelClick = { printPreviewItem = item },
-                        onDeleteClick = { viewModel.deleteEquipment(item) }
+                        onDeleteClick = { deletingEquipmentItem = item }
                     )
                 }
             }
@@ -1065,6 +1234,7 @@ private fun EquipmentItemCard(
     item: EquipmentItem,
     isSelected: Boolean,
     onToggleSelect: () -> Unit,
+    onEditClick: () -> Unit,
     onPrintLabelClick: () -> Unit,
     onDeleteClick: () -> Unit
 ) {
@@ -1274,6 +1444,24 @@ private fun EquipmentItemCard(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Edit Button
+                OutlinedButton(
+                    onClick = onEditClick,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.height(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "ערוך פריט",
+                        tint = HighDensityPrimary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("ערוך", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HighDensityPrimary)
+                }
+
+                Spacer(modifier = Modifier.width(6.dp))
+
                 // Print Label Button
                 OutlinedButton(
                     onClick = onPrintLabelClick,

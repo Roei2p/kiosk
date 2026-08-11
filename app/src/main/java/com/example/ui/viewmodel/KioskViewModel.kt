@@ -143,6 +143,22 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     private val _registeredItem = MutableStateFlow<EquipmentItem?>(null)
     val registeredItem: StateFlow<EquipmentItem?> = _registeredItem.asStateFlow()
 
+    // Rapid Scan Mode (Continuous scanning without dialog interrupts)
+    private val _isRapidScanMode = MutableStateFlow(true)
+    val isRapidScanMode: StateFlow<Boolean> = _isRapidScanMode.asStateFlow()
+
+    fun setRapidScanMode(enabled: Boolean) {
+        _isRapidScanMode.value = enabled
+    }
+
+    // Success notification banner for continuous scanning
+    private val _lastSavedNotification = MutableStateFlow<String?>(null)
+    val lastSavedNotification: StateFlow<String?> = _lastSavedNotification.asStateFlow()
+
+    fun clearSavedNotification() {
+        _lastSavedNotification.value = null
+    }
+
     // Inventory History Filters
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -359,14 +375,24 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             repository.insertEquipment(newItem)
             _registeredItem.value = newItem
-            
+
             // Advance inventory range counter for the next scan!
             val nextCounter = (_currentInvCounter.value + 1).coerceAtMost(_rangeEndNum.value)
             _currentInvCounter.value = nextCounter
             prefs.edit().putInt("current_counter", nextCounter).apply()
             fetchNextAutoInventoryNumber()
 
-            _currentStep.value = RegistrationStep.STEP_4_LABEL_PRINT_PREVIEW
+            if (_isRapidScanMode.value) {
+                // Stay in scanner screen for continuous rapid scanning!
+                _lastSavedNotification.value = "✓ נרשם בהצלחה! אינוונטר $assignedInvNumber (S/N: ${newItem.serialNumber})"
+                _rawBarcode.value = ""
+                _parsedSn.value = ""
+                _matchedRuleName.value = ""
+                _notes.value = ""
+                _currentStep.value = RegistrationStep.STEP_1_SCAN_MANUFACTURER
+            } else {
+                _currentStep.value = RegistrationStep.STEP_4_LABEL_PRINT_PREVIEW
+            }
         }
     }
 
@@ -397,6 +423,18 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteAllEquipment() {
         viewModelScope.launch {
             repository.deleteAllEquipment()
+        }
+    }
+
+    fun updateParsingRule(rule: ParsingRule) {
+        viewModelScope.launch {
+            repository.updateRule(rule)
+        }
+    }
+
+    fun updateEquipmentItem(item: EquipmentItem) {
+        viewModelScope.launch {
+            repository.updateEquipment(item)
         }
     }
 
