@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Schedule
@@ -53,6 +54,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -1653,31 +1656,13 @@ private fun EquipmentItemCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Action Buttons Bar with explicit labels
+            // Action Buttons Bar - one visible action (printing the sticker is
+            // the common next step), everything else tucked behind a menu.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Edit Button
-                OutlinedButton(
-                    onClick = onEditClick,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "ערוך פריט",
-                        tint = HighDensityPrimary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("ערוך", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HighDensityPrimary)
-                }
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                // Print Label Button
                 OutlinedButton(
                     onClick = onPrintLabelClick,
                     shape = RoundedCornerShape(8.dp),
@@ -1690,42 +1675,52 @@ private fun EquipmentItemCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("הדפס מדבקת ZPL", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HighDensityPrimary)
+                    Text("הדפס מדבקה", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HighDensityPrimary)
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
-                // Export Individual Item Button
-                OutlinedButton(
-                    onClick = {
-                        SapCsvExporter.exportAndShareExcelCsv(context, listOf(item))
-                    },
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = "ייצוא לאקסל",
-                        tint = HighDensitySuccess,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("ייצא קובץ אקסל", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HighDensitySuccess)
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Delete Button
-                IconButton(
-                    onClick = onDeleteClick,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "מחק פריט מהמאגר",
-                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
-                        modifier = Modifier.size(20.dp)
-                    )
+                var showMoreMenu by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(
+                        onClick = { showMoreMenu = true },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "אפשרויות נוספות",
+                            tint = Color(0xFF64748B)
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showMoreMenu,
+                        onDismissRequest = { showMoreMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("ערוך פריט") },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = HighDensityPrimary) },
+                            onClick = {
+                                showMoreMenu = false
+                                onEditClick()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("ייצא לאקסל") },
+                            leadingIcon = { Icon(Icons.Default.Download, contentDescription = null, tint = HighDensitySuccess) },
+                            onClick = {
+                                showMoreMenu = false
+                                SapCsvExporter.exportAndShareExcelCsv(context, listOf(item))
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("מחק פריט", color = MaterialTheme.colorScheme.error) },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                            onClick = {
+                                showMoreMenu = false
+                                onDeleteClick()
+                            }
+                        )
+                    }
                 }
             }
         }

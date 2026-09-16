@@ -72,7 +72,6 @@ fun KioskMainScreen(
     // 0: Dashboard, 1: Scanner, 2: Inventory, 3: Settings
     var selectedTab by remember { mutableIntStateOf(1) } // Default to Scanner view
     var showRangeDialog by remember { mutableStateOf(false) }
-    var showBarcodeRulesDialog by remember { mutableStateOf(false) }
 
     val inventoryPrefix by viewModel.inventoryPrefix.collectAsState()
     val rangeStartNum by viewModel.rangeStartNum.collectAsState()
@@ -95,25 +94,6 @@ fun KioskMainScreen(
             onDismiss = { showRangeDialog = false },
             onSave = { prefix, start, end, current ->
                 viewModel.updateInventoryRangeSettings(prefix, start, end, current)
-            }
-        )
-    }
-
-    if (showBarcodeRulesDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showBarcodeRulesDialog = false },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = { showBarcodeRulesDialog = false }) {
-                    Text("סגור", fontWeight = FontWeight.Bold)
-                }
-            },
-            title = {
-                Text("כללי סריקה (Regex)", fontWeight = FontWeight.Bold)
-            },
-            text = {
-                Box(modifier = Modifier.height(400.dp)) {
-                    BarcodeRulesTab(viewModel = viewModel)
-                }
             }
         )
     }
@@ -227,8 +207,7 @@ fun KioskMainScreen(
                 2 -> InventoryListTab(viewModel = viewModel)
                 3 -> SettingsTab(
                     viewModel = viewModel,
-                    onOpenRangeDialog = { showRangeDialog = true },
-                    onOpenBarcodeRules = { showBarcodeRulesDialog = true }
+                    onOpenRangeDialog = { showRangeDialog = true }
                 )
             }
         }
