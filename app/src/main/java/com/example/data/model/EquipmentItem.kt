@@ -19,5 +19,17 @@ data class EquipmentItem(
     val safetyTestDate: String,           // "2026-08-05"
     val nextSafetyTestDate: String,       // "2027-08-05"
     val notes: String = "",
-    val status: String = "מאושר ומודפס"     // "מאושר ומודפס", "ממתין לבדיקה", "תקול"
+    val status: String = "מאושר ומודפס",    // "מאושר ומודפס", "ממתין לבדיקה", "תקול"
+
+    // --- Fulfillment / Delivery Tracking ---
+    val deliveryStatus: String = DeliveryStatus.READY_FOR_DELIVERY, // ready to deliver, or already delivered
+    val recipientName: String = "",        // שם הגורם המקבל / הפרופסור
+    val recipientDepartment: String = "",  // מחלקה יעד למסירה
+    val deliveryDate: String = "",         // "2026-08-06 09:15"
+    val deliveryNotes: String = ""         // הערות מסירה / אישור קבלה
 )
+
+object DeliveryStatus {
+    const val READY_FOR_DELIVERY = "מוכן למסירה"
+    const val DELIVERED = "נמסר ליעד"
+}

@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.database.EquipmentDatabase
+import com.example.data.model.DeliveryStatus
 import com.example.data.model.EquipmentItem
 import com.example.data.model.ParsingRule
 import com.example.data.repository.EquipmentRepository
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -49,6 +51,15 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val equipmentCount: StateFlow<Int> = repository.equipmentCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    // Fulfillment / Delivery Stats
+    val pendingDeliveryCount: StateFlow<Int> = allEquipmentList
+        .map { list -> list.count { it.deliveryStatus != DeliveryStatus.DELIVERED } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val deliveredCount: StateFlow<Int> = allEquipmentList
+        .map { list -> list.count { it.deliveryStatus == DeliveryStatus.DELIVERED } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val parsingRules: StateFlow<List<ParsingRule>> = repository.allRules
@@ -435,6 +446,39 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     fun updateEquipmentItem(item: EquipmentItem) {
         viewModelScope.launch {
             repository.updateEquipment(item)
+        }
+    }
+
+    fun deliverEquipment(
+        item: EquipmentItem,
+        recipientName: String,
+        recipientDepartment: String,
+        deliveryNotes: String
+    ) {
+        val now = Date()
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        val updated = item.copy(
+            deliveryStatus = DeliveryStatus.DELIVERED,
+            recipientName = recipientName,
+            recipientDepartment = recipientDepartment,
+            deliveryDate = dateFormat.format(now),
+            deliveryNotes = deliveryNotes
+        )
+        viewModelScope.launch {
+            repository.updateEquipment(updated)
+        }
+    }
+
+    fun undoDelivery(item: EquipmentItem) {
+        val updated = item.copy(
+            deliveryStatus = DeliveryStatus.READY_FOR_DELIVERY,
+            recipientName = "",
+            recipientDepartment = "",
+            deliveryDate = "",
+            deliveryNotes = ""
+        )
+        viewModelScope.launch {
+            repository.updateEquipment(updated)
         }
     }
 

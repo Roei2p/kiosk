@@ -16,7 +16,7 @@ object SapCsvExporter {
         sb.append("\uFEFF")
         
         // Excel / CSV Headers - Clean Inventory & Serial Number export
-        sb.append("מספר אינוונטר,מספר סדורי (S/N),יצרן,סוג ציוד,מחלקה,תאריך רישום,הערות,סטטוס\n")
+        sb.append("מספר אינוונטר,מספר סדורי (S/N),יצרן,סוג ציוד,מחלקה,תאריך רישום,הערות,סטטוס,סטטוס מסירה,נמסר ל,מחלקה יעד,תאריך מסירה,הערות מסירה\n")
 
         for (item in items) {
             val line = listOf(
@@ -27,7 +27,12 @@ object SapCsvExporter {
                 sanitize(item.department),
                 sanitize(item.registrationDate),
                 sanitize(item.notes),
-                sanitize(item.status)
+                sanitize(item.status),
+                sanitize(item.deliveryStatus),
+                sanitize(item.recipientName),
+                sanitize(item.recipientDepartment),
+                sanitize(item.deliveryDate),
+                sanitize(item.deliveryNotes)
             ).joinToString(",")
 
             sb.append(line).append("\n")
