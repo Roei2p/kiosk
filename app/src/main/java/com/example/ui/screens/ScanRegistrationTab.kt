@@ -147,6 +147,13 @@ fun ScanRegistrationTab(
     val registeredItem by viewModel.registeredItem.collectAsState()
     val lastSavedNotification by viewModel.lastSavedNotification.collectAsState()
 
+    // Still needed by Step 2 (assign inventory number screen)
+    val inventoryPrefix by viewModel.inventoryPrefix.collectAsState()
+    val rangeStartNum by viewModel.rangeStartNum.collectAsState()
+    val rangeEndNum by viewModel.rangeEndNum.collectAsState()
+    val currentInvCounter by viewModel.currentInvCounter.collectAsState()
+    val remainingInRange by viewModel.remainingInRange.collectAsState()
+
     var showCameraModal by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
