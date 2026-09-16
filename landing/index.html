@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>רשם ציוד רפואי — כללית הנדסה רפואית</title>
+<meta name="description" content="איך מדבקות שהתעופפו וכתב יד לא קריא הולידו את המערכת שמחליפה את הפתקים.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%B7%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;600;700&family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#faf6ee;
+    --bg-raised:#f3ecdd;
+    --paper-card:#ffffff;
+    --ink:#1c2a3d;
+    --ink-soft:#5c6a7e;
+    --line:#e3d9c2;
+    --accent-warn:#b1551f;
+    --accent-warn-soft:#f4e3d4;
+    --accent-solve:#166e5c;
+    --accent-solve-soft:#e0f0ea;
+    --mock-bg:#12203a;
+    --mock-line:#2c3f5f;
+    --mock-ink:#eef2f8;
+    --mock-soft:#93a4bf;
+    --font-display:'Frank Ruhl Libre', 'Noto Serif Hebrew', serif;
+    --font-body:'Heebo', 'Noto Sans Hebrew', sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#10182a;
+      --bg-raised:#161f36;
+      --paper-card:#1a2440;
+      --ink:#edf1f8;
+      --ink-soft:#96a3bd;
+      --line:#2b3a5c;
+      --accent-warn:#e2905a;
+      --accent-warn-soft:#3a2a20;
+      --accent-solve:#4fc0a4;
+      --accent-solve-soft:#173630;
+      --mock-bg:#0a1425;
+      --mock-line:#233252;
+      --mock-ink:#eef2f8;
+      --mock-soft:#8a9ab8;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#10182a;
+    --bg-raised:#161f36;
+    --paper-card:#1a2440;
+    --ink:#edf1f8;
+    --ink-soft:#96a3bd;
+    --line:#2b3a5c;
+    --accent-warn:#e2905a;
+    --accent-warn-soft:#3a2a20;
+    --accent-solve:#4fc0a4;
+    --accent-solve-soft:#173630;
+    --mock-bg:#0a1425;
+    --mock-line:#233252;
+    --mock-ink:#eef2f8;
+    --mock-soft:#8a9ab8;
+  }
+
+  *{ box-sizing:border-box; }
+  body{ background:var(--bg); margin:0; }
+  .page{
+    direction:rtl;
+    font-family:var(--font-body);
+    color:var(--ink);
+    background:var(--bg);
+    line-height:1.55;
+  }
+  h1,h2,h3,blockquote{ font-family:var(--font-display); text-wrap:balance; margin:0; }
+  p{ margin:0; }
+  img{ max-width:100%; }
+  .wrap{
+    max-width:920px;
+    margin-inline:auto;
+    padding-inline:20px;
+  }
+  section{ padding-block:64px; }
+  @media (max-width:640px){ section{ padding-block:44px; } }
+
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.06em;
+    color:var(--accent-solve);
+  }
+  .eyebrow::before{
+    content:"";
+    width:18px; height:2px;
+    background:var(--accent-solve);
+    display:inline-block;
+  }
+  .eyebrow.warn{ color:var(--accent-warn); }
+  .eyebrow.warn::before{ background:var(--accent-warn); }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    padding-block:76px 56px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero-grain{
+    position:absolute; inset:0;
+    background-image:
+      radial-gradient(circle at 14% 20%, color-mix(in srgb, var(--accent-solve) 10%, transparent) 0, transparent 38%),
+      radial-gradient(circle at 86% 8%, color-mix(in srgb, var(--accent-warn) 12%, transparent) 0, transparent 42%);
+    pointer-events:none;
+  }
+  .hero-inner{ position:relative; display:flex; flex-direction:column; gap:22px; max-width:660px; }
+  .hero h1{
+    font-size:clamp(30px, 5.4vw, 48px);
+    line-height:1.18;
+    font-weight:600;
+    letter-spacing:-.01em;
+    animation:rise .6s ease both;
+  }
+  .hero .lede{
+    font-size:18px;
+    color:var(--ink-soft);
+    max-width:56ch;
+    animation:rise .6s .08s ease both;
+  }
+  .badges{ display:flex; flex-wrap:wrap; gap:10px; animation:rise .6s .16s ease both; }
+  .badge{
+    display:inline-flex; align-items:center; gap:8px;
+    border:1px solid var(--line);
+    background:var(--paper-card);
+    border-radius:999px;
+    padding:8px 14px;
+    font-size:13.5px;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .badge svg{ width:16px; height:16px; color:var(--accent-solve); flex:none; }
+  @keyframes rise{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+  @media (prefers-reduced-motion: reduce){ .hero h1,.hero .lede,.badges,.cta-row{ animation:none; } }
+
+  .cta-row{ display:flex; flex-wrap:wrap; align-items:center; gap:14px; animation:rise .6s .22s ease both; }
+  .btn-download{
+    display:inline-flex; align-items:center; gap:10px;
+    background:var(--accent-solve);
+    color:#f4fbf8;
+    text-decoration:none;
+    font-weight:700;
+    font-size:15px;
+    padding:14px 22px;
+    border-radius:12px;
+    box-shadow:0 14px 26px -14px color-mix(in srgb, var(--accent-solve) 70%, transparent);
+  }
+  .btn-download svg{ width:19px; height:19px; }
+  .cta-hint{ font-size:13px; color:var(--ink-soft); }
+
+  /* ---------- ICON TILES ---------- */
+  .icon-tile{
+    width:44px; height:44px;
+    border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    flex:none;
+  }
+  .icon-tile svg{ width:22px; height:22px; }
+  .icon-tile.warn{ background:var(--accent-warn-soft); color:var(--accent-warn); }
+  .icon-tile.solve{ background:var(--accent-solve-soft); color:var(--accent-solve); }
+
+  /* ---------- PROBLEM ---------- */
+  .problem{ background:var(--bg-raised); border-block:1px solid var(--line); }
+  .problem h2{ font-size:clamp(24px,3.6vw,32px); font-weight:600; max-width:20ch; }
+  .problem .lede{ color:var(--ink-soft); font-size:16.5px; max-width:60ch; margin-block-start:14px; }
+
+  .notes{
+    display:flex; flex-wrap:wrap; gap:16px;
+    margin-block-start:36px;
+  }
+  .note{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:4px 4px 14px 4px;
+    box-shadow:0 10px 22px -14px color-mix(in srgb, var(--ink) 45%, transparent);
+    padding:16px 18px;
+    width:190px;
+    font-family:var(--font-display);
+    font-size:14.5px;
+    color:var(--ink-soft);
+  }
+  .note b{ display:block; color:var(--ink); font-size:15px; margin-block-end:4px; }
+  .note:nth-child(1){ transform:rotate(-3deg); }
+  .note:nth-child(2){ transform:rotate(2.2deg); margin-block-start:14px; }
+  .note:nth-child(3){ transform:rotate(-1.6deg); }
+  .note:nth-child(4){ transform:rotate(3deg); margin-block-start:10px; }
+
+  .pain-grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:18px;
+    margin-block-start:40px;
+  }
+  @media (max-width:640px){ .pain-grid{ grid-template-columns:1fr; } }
+  .pain-card{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:20px;
+    display:flex; gap:14px;
+  }
+  .pain-card h3{ font-size:16.5px; font-weight:600; font-family:var(--font-body); }
+  .pain-card p{ color:var(--ink-soft); font-size:14.5px; margin-block-start:6px; }
+
+  /* ---------- INSIGHT / PULL QUOTE ---------- */
+  .insight{ text-align:center; }
+  .insight blockquote{
+    font-size:clamp(22px,4vw,32px);
+    font-weight:500;
+    line-height:1.45;
+    max-width:18ch;
+    margin-inline:auto;
+    color:var(--ink);
+  }
+  .insight .mark{ color:var(--accent-solve); }
+  .insight .attrib{
+    display:block;
+    margin-block-start:20px;
+    font-size:14px;
+    color:var(--ink-soft);
+    font-weight:600;
+  }
+
+  /* ---------- SOLUTION ---------- */
+  .solution{ background:var(--bg-raised); border-block:1px solid var(--line); }
+  .solution h2{ font-size:clamp(24px,3.6vw,32px); font-weight:600; }
+  .solution-grid{
+    display:grid;
+    grid-template-columns:1.1fr 1fr;
+    gap:44px;
+    align-items:start;
+    margin-block-start:40px;
+  }
+  @media (max-width:800px){ .solution-grid{ grid-template-columns:1fr; } }
+
+  .steps{ display:flex; flex-direction:column; }
+  .step{ display:flex; gap:16px; padding-block:18px; position:relative; }
+  .step:not(:last-child)::after{
+    content:"";
+    position:absolute;
+    inset-inline-start:21px;
+    top:56px; bottom:-4px;
+    width:2px;
+    background:var(--line);
+  }
+  .step-num{
+    flex:none;
+    width:44px; height:44px;
+    border-radius:50%;
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:17px;
+    color:var(--accent-solve);
+    z-index:1;
+  }
+  .step h3{ font-size:16.5px; font-weight:700; font-family:var(--font-body); }
+  .step p{ color:var(--ink-soft); font-size:14.5px; margin-block-start:4px; }
+
+  /* device mockup */
+  .device{
+    background:var(--mock-bg);
+    border-radius:26px;
+    padding:18px;
+    box-shadow:0 30px 50px -24px rgba(0,0,0,.45);
+    color:var(--mock-ink);
+    position:sticky;
+    top:20px;
+  }
+  .device-notch{ width:52px; height:5px; border-radius:99px; background:var(--mock-line); margin-inline:auto; margin-block-end:14px; }
+  .device-head{ display:flex; align-items:center; gap:10px; font-size:13px; font-weight:600; color:var(--mock-soft); }
+  .device-head svg{ width:18px; height:18px; color:var(--accent-solve); }
+  .device-banner{
+    margin-block-start:14px;
+    background:color-mix(in srgb, var(--accent-solve) 22%, var(--mock-bg));
+    border:1px solid color-mix(in srgb, var(--accent-solve) 55%, transparent);
+    border-radius:12px;
+    padding:12px 14px;
+  }
+  .device-banner .sn{
+    font-family:var(--font-display);
+    font-size:17px;
+    font-weight:600;
+    margin-block-start:2px;
+  }
+  .device-banner small{ color:var(--mock-soft); font-size:12px; }
+  .device-row{ display:flex; gap:8px; margin-block-start:12px; }
+  .device-pill{
+    flex:1;
+    background:var(--mock-bg);
+    border:1px solid var(--mock-line);
+    border-radius:10px;
+    padding:10px 12px;
+    font-size:12.5px;
+    color:var(--mock-soft);
+  }
+  .device-pill b{ display:block; color:var(--mock-ink); font-size:13.5px; font-weight:600; margin-block-start:2px; }
+  .device-cta{
+    margin-block-start:14px;
+    background:var(--accent-solve);
+    color:#08201a;
+    text-align:center;
+    border-radius:10px;
+    padding:13px;
+    font-weight:700;
+    font-size:14px;
+  }
+
+  /* ---------- COMPARISON (emphasized, sits right after the hero) ---------- */
+  .compare{ padding-block:12px 64px; }
+  .compare-card{
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:22px;
+    overflow:hidden;
+    box-shadow:0 28px 50px -30px color-mix(in srgb, var(--ink) 55%, transparent);
+  }
+  .compare h2{ font-size:clamp(24px,3.6vw,32px); font-weight:600; }
+  .compare table{ width:100%; border-collapse:collapse; }
+  .compare-wrap{ overflow-x:auto; }
+  .compare th, .compare td{ padding:16px 20px; text-align:start; font-size:15px; border-bottom:1px solid var(--line); }
+  .compare thead th{ font-family:var(--font-display); font-weight:700; font-size:16.5px; padding-block:20px; }
+  .compare thead tr{ background:var(--bg-raised); }
+  .compare th.col-warn{ color:var(--accent-warn); }
+  .compare th.col-solve{ color:var(--accent-solve); background:color-mix(in srgb, var(--accent-solve) 10%, var(--bg-raised)); }
+  .compare tbody td.solve{ background:color-mix(in srgb, var(--accent-solve) 5%, transparent); }
+  .compare tbody tr:last-child td{ border-bottom:none; }
+  .compare td.row-label{ color:var(--ink-soft); font-weight:700; width:30%; }
+  .compare td.warn{ color:var(--ink-soft); }
+  .compare td.warn svg{ width:15px; height:15px; color:var(--accent-warn); margin-inline-end:8px; vertical-align:-2px; }
+  .compare td.solve{ color:var(--ink); font-weight:700; }
+  .compare td.solve svg{ width:16px; height:16px; color:var(--accent-solve); margin-inline-end:8px; vertical-align:-2px; }
+
+  /* ---------- FOOTER ---------- */
+  footer{ padding-block:48px 60px; }
+  .foot-row{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; border-top:1px solid var(--line); padding-block-start:28px; }
+  .brand{ display:flex; align-items:center; gap:10px; font-family:var(--font-display); font-weight:600; font-size:15.5px; }
+  .brand svg{ width:26px; height:26px; color:var(--accent-solve); }
+  footer .tagline{ color:var(--ink-soft); font-size:13.5px; }
+  .foot-link{ display:inline-flex; align-items:center; gap:6px; color:var(--accent-solve); font-weight:700; font-size:13.5px; text-decoration:none; }
+  .foot-link svg{ width:15px; height:15px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-grain" aria-hidden="true"></div>
+    <div class="wrap hero-inner">
+      <span class="eyebrow">הסיפור שמאחורי המערכת</span>
+      <h1>לפני שהייתה מערכת, היה פתק — ולפעמים גם לא</h1>
+      <p class="lede">
+        ככה נראה רישום ציוד רפואי במלאי עד היום: מספר סידורי שמועתק ביד על מדבקה, תעודת משלוח שמתפספסת,
+        ותאריך בדיקת בטיחות שאף אחד לא זוכר לרשום בשום מקום. המערכת הזו לא נולדה מרעיון גדול —
+        היא נולדה מהצורך הפשוט לדעת בוודאות איפה כל פריט, מתי הוא נבדק, ולמי הוא נמסר.
+      </p>
+      <div class="badges">
+        <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg> ללא נייר</span>
+        <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 2v4M16 2v4M4 10h16"/></svg> מדבקה חד־ערכית לכל פריט</span>
+        <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h11M13 6l6 6-6 6"/></svg> מעקב עד למסירה בפועל</span>
+      </div>
+      <div class="cta-row">
+        <a class="btn-download" href="https://github.com/Roei2p/kiosk/releases/download/debug-latest/kiosk-debug.apk" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>
+          הורדת האפליקציה (APK)
+        </a>
+        <span class="cta-hint">גרסת בדיקה לאנדרואיד · מתעדכנת אוטומטית</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARISON - the whole story in one glance, right up top -->
+  <section class="compare">
+    <div class="wrap">
+      <span class="eyebrow">לפני ואחרי</span>
+      <h2>מה בעצם השתנה</h2>
+      <div class="compare-card">
+        <div class="compare-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th class="col-warn">פתק ועט</th>
+                <th class="col-solve">רשם ציוד רפואי</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="row-label">מספר סידורי</td>
+                <td class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>מועתק ביד, ניתן לטעות</td>
+                <td class="solve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>נסרק ומזוהה אוטומטית</td>
+              </tr>
+              <tr>
+                <td class="row-label">מספר אינוונטר</td>
+                <td class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>נבחר ידנית מתוך זיכרון</td>
+                <td class="solve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>מוקצה אוטומטית מטווח קבוע</td>
+              </tr>
+              <tr>
+                <td class="row-label">בדיקת בטיחות</td>
+                <td class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>תלוי שמישהו יזכור</td>
+                <td class="solve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>סטטוס ותאריך במערכת</td>
+              </tr>
+              <tr>
+                <td class="row-label">מסירה ליעד</td>
+                <td class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>בלי שום אישור</td>
+                <td class="solve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>שם מקבל, מחלקה ותאריך</td>
+              </tr>
+              <tr>
+                <td class="row-label">איפה המידע</td>
+                <td class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>דף שיכול להיעלם</td>
+                <td class="solve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>מאגר מקומי בטלפון</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROBLEM -->
+  <section class="problem">
+    <div class="wrap">
+      <span class="eyebrow warn">הבעיה</span>
+      <h2>תיוג ידני הוא ניחוש מאורגן</h2>
+      <p class="lede">
+        כל פריט ציוד שמגיע צריך שתי מדבקות, מספר אינוונטר, ותיעוד של מי בדק ומתי.
+        כשכל זה קורה על פתקים נפרדים — כל שלב הוא הזדמנות נוספת לטעות, לאובדן, או סתם לשכחה.
+      </p>
+
+      <div class="notes" aria-hidden="true">
+        <div class="note"><b>מס׳ סידורי</b>אולי 1389998? אולי 138998... קשה לקרוא</div>
+        <div class="note"><b>בדיקת בטיחות</b>לרשום איפשהו לבדוק שוב בעוד שנה</div>
+        <div class="note"><b>נמסר למי?</b>למחלקה... איזו מחלקה? מי חתם?</div>
+        <div class="note"><b>תעודת משלוח</b>איפה זה בכלל, מישהו ראה?</div>
+      </div>
+
+      <div class="pain-grid">
+        <div class="pain-card">
+          <div class="icon-tile warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l6-1 10-10a2.5 2.5 0 00-3.5-3.5L6.5 15.5z"/><path d="M14 6l4 4"/></svg></div>
+          <div>
+            <h3>כתב יד לא קריא</h3>
+            <p>מספר סידורי שנכתב בעט על מדבקה מתקלפת קשה לקרוא כבר ביום הראשון — ובלתי אפשרי אחרי חצי שנה.</p>
+          </div>
+        </div>
+        <div class="pain-card">
+          <div class="icon-tile warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.5 2.5 0 014.9.8c0 1.7-2.4 2-2.4 3.5"/><path d="M12 17h.01"/></svg></div>
+          <div>
+            <h3>אף מקום לא "זוכר"</h3>
+            <p>כשהרישום מתבצע על פתק או בגיליון נפרד, שום מקום לא זוכר אילו פריטים כבר טופלו ואילו עדיין מחכים.</p>
+          </div>
+        </div>
+        <div class="pain-card">
+          <div class="icon-tile warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 11h16"/><path d="M9 16l2 2 4-4"/></svg></div>
+          <div>
+            <h3>תאריכים שנשכחים</h3>
+            <p>בלי תזכורת דיגיטלית, בדיקת בטיחות חשמל שנתית קל לפספס — וזה סיכון בטיחותי, לא רק אי־נוחות.</p>
+          </div>
+        </div>
+        <div class="pain-card">
+          <div class="icon-tile warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l8-4 8 4-8 4-8-4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></svg></div>
+          <div>
+            <h3>אין תיעוד מסירה</h3>
+            <p>ציוד יוצא למחלקה בלי אישור שמישהו קיבל אותו — וכשמשהו הולך לאיבוד, אין לאן לחזור ולבדוק.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSIGHT -->
+  <section class="insight">
+    <div class="wrap">
+      <blockquote>אם המדבקה היא <span class="mark">הזהות</span> של הציוד — למה שהיא לא <span class="mark">תדע לספר</span> את הסיפור שלו בעצמה?</blockquote>
+      <span class="attrib">כך התחיל הפרויקט</span>
+    </div>
+  </section>
+
+  <!-- SOLUTION -->
+  <section class="solution">
+    <div class="wrap">
+      <span class="eyebrow">מה שקם במקום זה</span>
+      <h2>סריקה אחת, במקום שלושה פתקים</h2>
+
+      <div class="solution-grid">
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div>
+              <h3>סריקה</h3>
+              <p>מצלמת הטלפון מזהה את מדבקת היצרן ומחלצת ממנה את המספר הסידורי אוטומטית — בלי הקלדה.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div>
+              <h3>שיוך אוטומטי</h3>
+              <p>מספר אינוונטר מוקצה מיד מתוך טווח מוגדר מראש, בלי צורך לחפש או להמציא מספר פנוי.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div>
+              <h3>הדפסת מדבקות</h3>
+              <p>מדבקת אינוונטר ומדבקת בטיחות חשמל מודפסות ומשויכות לאותו פריט, באותו רגע.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div>
+              <h3>מסירה מתועדת</h3>
+              <p>כשהציוד מגיע ליעד הסופי, המסירה נרשמת עם שם המקבל, המחלקה והתאריך — במקום אחד.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="device" role="img" aria-label="דמיית מסך הסריקה באפליקציה">
+          <div class="device-notch"></div>
+          <div class="device-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7l1.5-3h5L16 7"/><circle cx="12" cy="13.5" r="3.2"/></svg>
+            זיהוי ורישום ציוד
+          </div>
+          <div class="device-banner">
+            <small>זיהוי מספר סידורי בוצע בהצלחה</small>
+            <div class="sn">SN: 1389998</div>
+          </div>
+          <div class="device-row">
+            <div class="device-pill">סוג ציוד<b>מיטת בדיקה</b></div>
+            <div class="device-pill">מחלקה<b>מיון (מלר״ד)</b></div>
+          </div>
+          <div class="device-cta">שמירה ואישור פריט 940101 במלאי</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot-row">
+        <div class="brand">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 12l2 2 4-4"/></svg>
+          כללית הנדסה רפואית בע״מ
+        </div>
+        <span class="tagline">התחלנו מפתק שהתעופף. הגענו למערכת שלא שוכחת.</span>
+        <a class="foot-link" href="https://github.com/Roei2p/kiosk/releases/download/debug-latest/kiosk-debug.apk" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>
+          הורדת ה-APK
+        </a>
+      </div>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

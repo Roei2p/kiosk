@@ -67,24 +67,11 @@ jobs:
           make_latest: true
           files: dist/kiosk-debug.apk
 
-      - name: Prepare GitHub Pages download page
+      - name: Prepare GitHub Pages site
         run: |
           mkdir -p public
           cp dist/kiosk-debug.apk public/kiosk-debug.apk
-          cat > public/index.html <<'HTML'
-          <!DOCTYPE html>
-          <html lang="he" dir="rtl">
-          <head>
-            <meta charset="UTF-8" />
-            <title>רשם ציוד רפואי - Kiosk</title>
-          </head>
-          <body>
-            <h1>רשם ציוד רפואי - Kiosk (Debug APK)</h1>
-            <p>גרסת בדיקה אוטומטית, מעודכנת מהקומיט האחרון בענף.</p>
-            <p><a href="./kiosk-debug.apk">הורד את קובץ ה-APK</a></p>
-          </body>
-          </html>
-          HTML
+          cp landing/index.html public/index.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
