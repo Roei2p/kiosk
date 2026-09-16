@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.SyncProblem
@@ -75,9 +76,7 @@ fun DashboardTab(
     val todayEquipment = remember(allEquipmentList) {
         allEquipmentList.filter { it.registrationDate.startsWith(todayStr) }
     }
-    val pendingSyncCount = remember(allEquipmentList) {
-        allEquipmentList.count { it.status.contains("ממתין", ignoreCase = true) || it.safetyStickerId.isEmpty() }
-    }
+    val pendingDeliveryCount by viewModel.pendingDeliveryCount.collectAsState()
 
     Box(
         modifier = Modifier
@@ -199,13 +198,13 @@ fun DashboardTab(
                 }
             }
 
-            // Stat Metrics Grid Row
+            // Stat Metrics Grid Row - the 3 numbers a technician actually
+            // needs at a glance; everything else lives in the Inventory tab.
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Metric 1: Scanned Today
                     StatMetricCard(
                         modifier = Modifier.weight(1f),
                         title = "נסרקו היום",
@@ -216,7 +215,6 @@ fun DashboardTab(
                         containerBg = Color.White
                     )
 
-                    // Metric 2: Total Inventory
                     StatMetricCard(
                         modifier = Modifier.weight(1f),
                         title = "סה\"כ במלאי",
@@ -227,14 +225,13 @@ fun DashboardTab(
                         containerBg = Color.White
                     )
 
-                    // Metric 3: Pending Sync / Attention
                     StatMetricCard(
                         modifier = Modifier.weight(1f),
-                        title = "ממתין לסנכרון",
-                        count = pendingSyncCount,
-                        unit = "חורגים",
-                        icon = Icons.Default.SyncProblem,
-                        iconTint = if (pendingSyncCount > 0) Color(0xFFD97706) else Color(0xFF94A3B8),
+                        title = "ממתינים למסירה",
+                        count = pendingDeliveryCount,
+                        unit = "פריטים",
+                        icon = Icons.Default.LocalShipping,
+                        iconTint = if (pendingDeliveryCount > 0) Color(0xFFD97706) else Color(0xFF94A3B8),
                         containerBg = Color.White
                     )
                 }

@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.database.EquipmentDatabase
+import com.example.data.model.DeliveryStatus
 import com.example.data.model.EquipmentItem
 import com.example.data.model.ParsingRule
 import com.example.data.repository.EquipmentRepository
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -26,13 +28,6 @@ enum class RegistrationStep {
     STEP_2_ASSIGN_INVENTORY,    // Step 2: Assign Inventory Number & Safety Sticker
     STEP_3_VALIDATE_PAIR,       // Step 3: High-visibility Validation & Pairing Screen
     STEP_4_LABEL_PRINT_PREVIEW  // Step 4: Label Printing Integration & ZPL
-}
-
-enum class LabelRecognitionMode(val displayName: String, val description: String) {
-    AUTO_SMART("זיהוי אוטומטי חכם (ברקוד / SN / טקסט חופשי)", "סורק ומפענח ברקודים, מקטעי SN, או מדבקות יצרן משולבות באופן אוטומטי"),
-    SEERS_BEDS_SPECIFIC("זיהוי מדבקת יצרן SEERS MEDICAL - מיטות וספות [SN 1389998]", "ברירת מחדל: מותאם במיוחד למדבקות יצרן SEERS Medical דגם SM2560 ומחלץ SN: 1389998"),
-    STRICT_SN_KEYWORD("זיהוי לפי מילת מפתח SN / S/N בלבד", "מחלץ רק מספרים וערכים המופיעים בצמוד למילים SN, S/N, או SERIAL"),
-    BARCODE_ONLY("סריקת ברקוד חומרה בלבד (ללא OCR טקסט)", "מתעלם מטקסט חופשי במצלמה ומסתמך אך ורק על סריקת ברקוד רשמית (1D/2D)")
 }
 
 class KioskViewModel(application: Application) : AndroidViewModel(application) {
@@ -49,6 +44,15 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val equipmentCount: StateFlow<Int> = repository.equipmentCount
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    // Fulfillment / Delivery Stats
+    val pendingDeliveryCount: StateFlow<Int> = allEquipmentList
+        .map { list -> list.count { it.deliveryStatus != DeliveryStatus.DELIVERED } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val deliveredCount: StateFlow<Int> = allEquipmentList
+        .map { list -> list.count { it.deliveryStatus == DeliveryStatus.DELIVERED } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     val parsingRules: StateFlow<List<ParsingRule>> = repository.allRules
@@ -81,24 +85,6 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _autoPairingEnabled = MutableStateFlow(true)
     val autoPairingEnabled: StateFlow<Boolean> = _autoPairingEnabled.asStateFlow()
-
-    // Global Label Recognition Mode Setting
-    private val _labelRecognitionMode = MutableStateFlow(
-        try {
-            LabelRecognitionMode.valueOf(
-                prefs.getString("label_rec_mode", LabelRecognitionMode.SEERS_BEDS_SPECIFIC.name)
-                    ?: LabelRecognitionMode.SEERS_BEDS_SPECIFIC.name
-            )
-        } catch (e: Exception) {
-            LabelRecognitionMode.SEERS_BEDS_SPECIFIC
-        }
-    )
-    val labelRecognitionMode: StateFlow<LabelRecognitionMode> = _labelRecognitionMode.asStateFlow()
-
-    fun setLabelRecognitionMode(mode: LabelRecognitionMode) {
-        _labelRecognitionMode.value = mode
-        prefs.edit().putString("label_rec_mode", mode.name).apply()
-    }
 
     // Calculated remaining in defined range
     val remainingInRange: StateFlow<Int> = combine(
@@ -435,6 +421,39 @@ class KioskViewModel(application: Application) : AndroidViewModel(application) {
     fun updateEquipmentItem(item: EquipmentItem) {
         viewModelScope.launch {
             repository.updateEquipment(item)
+        }
+    }
+
+    fun deliverEquipment(
+        item: EquipmentItem,
+        recipientName: String,
+        recipientDepartment: String,
+        deliveryNotes: String
+    ) {
+        val now = Date()
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        val updated = item.copy(
+            deliveryStatus = DeliveryStatus.DELIVERED,
+            recipientName = recipientName,
+            recipientDepartment = recipientDepartment,
+            deliveryDate = dateFormat.format(now),
+            deliveryNotes = deliveryNotes
+        )
+        viewModelScope.launch {
+            repository.updateEquipment(updated)
+        }
+    }
+
+    fun undoDelivery(item: EquipmentItem) {
+        val updated = item.copy(
+            deliveryStatus = DeliveryStatus.READY_FOR_DELIVERY,
+            recipientName = "",
+            recipientDepartment = "",
+            deliveryDate = "",
+            deliveryNotes = ""
+        )
+        viewModelScope.launch {
+            repository.updateEquipment(updated)
         }
     }
 

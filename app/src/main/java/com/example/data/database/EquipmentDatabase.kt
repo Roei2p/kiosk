@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [EquipmentItem::class, ParsingRule::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class EquipmentDatabase : RoomDatabase() {

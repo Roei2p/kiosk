@@ -21,6 +21,11 @@ android {
     versionName = "29.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+    // Real devices in the field are effectively all arm64 (this is not a Play
+    // Store multi-ABI release); dropping the other ABIs keeps the bundled
+    // ML Kit native libraries from quadrupling the APK size.
+    ndk { abiFilters += "arm64-v8a" }
   }
 
   signingConfigs {
@@ -54,7 +59,15 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
+    debug {
+      signingConfig = signingConfigs.getByName("debugConfig")
+      // Shrink unused code/resources (mainly the huge material-icons-extended
+      // icon set) so the distributed debug APK is small enough to download
+      // reliably on mobile networks.
+      isMinifyEnabled = true
+      isShrinkResources = true
+      proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11

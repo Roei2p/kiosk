@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.ElectricBolt
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.LocalShipping
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Schedule
@@ -52,6 +54,8 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -82,6 +86,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.data.model.DeliveryStatus
 import com.example.data.model.EquipmentItem
 import com.example.ui.components.PrintPreviewCard
 import com.example.ui.theme.HighDensityDarkBlue
@@ -142,6 +147,12 @@ enum class SafetyCheckFilterOption(val label: String) {
     EXPIRED("פג תוקף")
 }
 
+enum class DeliveryFilterOption(val label: String) {
+    ALL("הכל"),
+    READY_FOR_DELIVERY("ממתין למסירה"),
+    DELIVERED("נמסר ליעד")
+}
+
 fun calculateSafetyStatus(item: EquipmentItem): SafetyCheckStatus {
     if (item.safetyStickerId.isBlank() || item.status.contains("ממתין", ignoreCase = true)) {
         return SafetyCheckStatus.PENDING
@@ -185,12 +196,14 @@ fun InventoryListTab(
 
     var selectedDateFilter by remember { mutableStateOf(DateFilterOption.ALL) }
     var selectedSafetyFilter by remember { mutableStateOf(SafetyCheckFilterOption.ALL) }
+    var selectedDeliveryFilter by remember { mutableStateOf(DeliveryFilterOption.ALL) }
     var printPreviewItem by remember { mutableStateOf<EquipmentItem?>(null) }
     var showAnalyticsCharts by remember { mutableStateOf(true) }
     var selectedItemIds by remember { mutableStateOf(setOf<Int>()) }
     var showClearAllConfirmDialog by remember { mutableStateOf(false) }
     var editingEquipmentItem by remember { mutableStateOf<EquipmentItem?>(null) }
     var deletingEquipmentItem by remember { mutableStateOf<EquipmentItem?>(null) }
+    var deliveringEquipmentItem by remember { mutableStateOf<EquipmentItem?>(null) }
 
     val deptFilters = remember {
         listOf("הכל") + DEPARTMENTS
@@ -207,9 +220,17 @@ fun InventoryListTab(
         allEquipmentList.count { calculateSafetyStatus(it) == SafetyCheckStatus.EXPIRED }
     }
 
+    // Delivery status counters for all equipment
+    val readyForDeliveryCount = remember(allEquipmentList) {
+        allEquipmentList.count { it.deliveryStatus != DeliveryStatus.DELIVERED }
+    }
+    val deliveredCount = remember(allEquipmentList) {
+        allEquipmentList.count { it.deliveryStatus == DeliveryStatus.DELIVERED }
+    }
+
     // Date & Safety Status filtering logic
     val todayStr = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date()) }
-    val equipmentList = remember(filteredBySearchAndDept, selectedDateFilter, selectedSafetyFilter, todayStr) {
+    val equipmentList = remember(filteredBySearchAndDept, selectedDateFilter, selectedSafetyFilter, selectedDeliveryFilter, todayStr) {
         val dateFiltered = when (selectedDateFilter) {
             DateFilterOption.ALL -> filteredBySearchAndDept
             DateFilterOption.TODAY -> filteredBySearchAndDept.filter { it.registrationDate.startsWith(todayStr) }
@@ -241,11 +262,17 @@ fun InventoryListTab(
             }
         }
 
-        when (selectedSafetyFilter) {
+        val safetyFiltered = when (selectedSafetyFilter) {
             SafetyCheckFilterOption.ALL -> dateFiltered
             SafetyCheckFilterOption.TESTED -> dateFiltered.filter { calculateSafetyStatus(it) == SafetyCheckStatus.TESTED }
             SafetyCheckFilterOption.PENDING -> dateFiltered.filter { calculateSafetyStatus(it) == SafetyCheckStatus.PENDING }
             SafetyCheckFilterOption.EXPIRED -> dateFiltered.filter { calculateSafetyStatus(it) == SafetyCheckStatus.EXPIRED }
+        }
+
+        when (selectedDeliveryFilter) {
+            DeliveryFilterOption.ALL -> safetyFiltered
+            DeliveryFilterOption.READY_FOR_DELIVERY -> safetyFiltered.filter { it.deliveryStatus != DeliveryStatus.DELIVERED }
+            DeliveryFilterOption.DELIVERED -> safetyFiltered.filter { it.deliveryStatus == DeliveryStatus.DELIVERED }
         }
     }
 
@@ -310,6 +337,83 @@ fun InventoryListTab(
             },
             dismissButton = {
                 OutlinedButton(onClick = { deletingEquipmentItem = null }) {
+                    Text("ביטול")
+                }
+            }
+        )
+    }
+
+    // Deliver to Destination Dialog
+    deliveringEquipmentItem?.let { item ->
+        var recipientName by remember(item) { mutableStateOf(item.recipientName) }
+        var recipientDept by remember(item) { mutableStateOf(item.recipientDepartment.ifBlank { item.department }) }
+        var deliveryNotesText by remember(item) { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { deliveringEquipmentItem = null },
+            title = {
+                Text(
+                    text = "מסירת פריט ליעד - #${item.inventoryNumber}",
+                    fontWeight = FontWeight.Bold,
+                    color = HighDensityDarkBlue
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "S/N: ${item.serialNumber} | ${item.equipmentType}",
+                        fontSize = 12.sp,
+                        color = Color(0xFF64748B)
+                    )
+                    OutlinedTextField(
+                        value = recipientName,
+                        onValueChange = { recipientName = it },
+                        label = { Text("שם הגורם המקבל / הפרופסור") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    OutlinedTextField(
+                        value = recipientDept,
+                        onValueChange = { recipientDept = it },
+                        label = { Text("מחלקה / יעד מסירה") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(DEPARTMENTS) { dept ->
+                            FilterChip(
+                                selected = recipientDept == dept,
+                                onClick = { recipientDept = dept },
+                                label = { Text(dept, fontSize = 11.sp) }
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = deliveryNotesText,
+                        onValueChange = { deliveryNotesText = it },
+                        label = { Text("הערות מסירה / אישור קבלה") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deliverEquipment(item, recipientName, recipientDept, deliveryNotesText)
+                        Toast.makeText(context, "הפריט נמסר בהצלחה ל-$recipientName", Toast.LENGTH_SHORT).show()
+                        deliveringEquipmentItem = null
+                    },
+                    enabled = recipientName.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = HighDensitySuccess)
+                ) {
+                    Text("אישור מסירה", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { deliveringEquipmentItem = null }) {
                     Text("ביטול")
                 }
             }
@@ -903,6 +1007,54 @@ fun InventoryListTab(
                     }
                 }
 
+                // Delivery Status Filter Chips Row
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.LocalShipping,
+                            contentDescription = null,
+                            tint = HighDensityPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "סינון לפי סטטוס מסירה ליעד:",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = HighDensityDarkBlue
+                        )
+                    }
+
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(DeliveryFilterOption.values()) { option ->
+                            val count = when (option) {
+                                DeliveryFilterOption.ALL -> allEquipmentList.size
+                                DeliveryFilterOption.READY_FOR_DELIVERY -> readyForDeliveryCount
+                                DeliveryFilterOption.DELIVERED -> deliveredCount
+                            }
+                            val isSelected = selectedDeliveryFilter == option
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { selectedDeliveryFilter = option },
+                                label = {
+                                    Text(
+                                        text = "${option.label} ($count)",
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        fontSize = 12.sp
+                                    )
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = HighDensitySuccess,
+                                    selectedLabelColor = Color.White
+                                )
+                            )
+                        }
+                    }
+                }
+
                 // Date Filter Chips Row
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1143,7 +1295,12 @@ fun InventoryListTab(
                         },
                         onEditClick = { editingEquipmentItem = item },
                         onPrintLabelClick = { printPreviewItem = item },
-                        onDeleteClick = { deletingEquipmentItem = item }
+                        onDeleteClick = { deletingEquipmentItem = item },
+                        onDeliverClick = { deliveringEquipmentItem = item },
+                        onUndoDeliveryClick = {
+                            viewModel.undoDelivery(item)
+                            Toast.makeText(context, "מסירת הפריט בוטלה", Toast.LENGTH_SHORT).show()
+                        }
                     )
                 }
             }
@@ -1236,7 +1393,9 @@ private fun EquipmentItemCard(
     onToggleSelect: () -> Unit,
     onEditClick: () -> Unit,
     onPrintLabelClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    onDeliverClick: () -> Unit,
+    onUndoDeliveryClick: () -> Unit
 ) {
     val context = LocalContext.current
     val safetyStatus = remember(item) { calculateSafetyStatus(item) }
@@ -1436,33 +1595,74 @@ private fun EquipmentItemCard(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Delivery / Fulfillment Status Banner
+            val isDelivered = item.deliveryStatus == DeliveryStatus.DELIVERED
+            Surface(
+                color = if (isDelivered) Color(0xFFE8F5E9) else Color(0xFFEFF6FF),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (isDelivered) Color(0xFFA5D6A7) else Color(0xFFBFDBFE)),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Icon(
+                            imageVector = Icons.Default.LocalShipping,
+                            contentDescription = null,
+                            tint = if (isDelivered) Color(0xFF1B5E20) else HighDensityPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = if (isDelivered) "נמסר ל: ${item.recipientName.ifBlank { "יעד לא ידוע" }}" else "טרם נמסר ליעד סופי",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDelivered) Color(0xFF1B5E20) else HighDensityDarkBlue
+                            )
+                            if (isDelivered) {
+                                Text(
+                                    text = "${item.recipientDepartment.ifBlank { item.department }} | ${item.deliveryDate}",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF1B5E20).copy(alpha = 0.85f)
+                                )
+                            }
+                        }
+                    }
+
+                    if (isDelivered) {
+                        TextButton(onClick = onUndoDeliveryClick) {
+                            Text("בטל מסירה", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                        }
+                    } else {
+                        Button(
+                            onClick = onDeliverClick,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = HighDensitySuccess),
+                            modifier = Modifier.height(34.dp)
+                        ) {
+                            Icon(Icons.Default.LocalShipping, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("מסור ליעד", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Action Buttons Bar with explicit labels
+            // Action Buttons Bar - one visible action (printing the sticker is
+            // the common next step), everything else tucked behind a menu.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Edit Button
-                OutlinedButton(
-                    onClick = onEditClick,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "ערוך פריט",
-                        tint = HighDensityPrimary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("ערוך", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HighDensityPrimary)
-                }
-
-                Spacer(modifier = Modifier.width(6.dp))
-
-                // Print Label Button
                 OutlinedButton(
                     onClick = onPrintLabelClick,
                     shape = RoundedCornerShape(8.dp),
@@ -1475,42 +1675,52 @@ private fun EquipmentItemCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("הדפס מדבקת ZPL", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HighDensityPrimary)
+                    Text("הדפס מדבקה", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HighDensityPrimary)
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
-                // Export Individual Item Button
-                OutlinedButton(
-                    onClick = {
-                        SapCsvExporter.exportAndShareExcelCsv(context, listOf(item))
-                    },
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.height(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Download,
-                        contentDescription = "ייצוא לאקסל",
-                        tint = HighDensitySuccess,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("ייצא קובץ אקסל", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = HighDensitySuccess)
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Delete Button
-                IconButton(
-                    onClick = onDeleteClick,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "מחק פריט מהמאגר",
-                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
-                        modifier = Modifier.size(20.dp)
-                    )
+                var showMoreMenu by remember { mutableStateOf(false) }
+                Box {
+                    IconButton(
+                        onClick = { showMoreMenu = true },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "אפשרויות נוספות",
+                            tint = Color(0xFF64748B)
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showMoreMenu,
+                        onDismissRequest = { showMoreMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("ערוך פריט") },
+                            leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = HighDensityPrimary) },
+                            onClick = {
+                                showMoreMenu = false
+                                onEditClick()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("ייצא לאקסל") },
+                            leadingIcon = { Icon(Icons.Default.Download, contentDescription = null, tint = HighDensitySuccess) },
+                            onClick = {
+                                showMoreMenu = false
+                                SapCsvExporter.exportAndShareExcelCsv(context, listOf(item))
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("מחק פריט", color = MaterialTheme.colorScheme.error) },
+                            leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                            onClick = {
+                                showMoreMenu = false
+                                onDeleteClick()
+                            }
+                        )
+                    }
                 }
             }
         }
