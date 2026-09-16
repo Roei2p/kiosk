@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>רשם ציוד רפואי — כללית הנדסה רפואית</title>
-<meta name="description" content="איך מדבקות שהתעופפו וכתב יד לא קריא הולידו את המערכת שמחליפה את הפתקים.">
+<meta name="description" content="60 שולחנות בדיקה, 240 הקלדות ידניות למשלוח: איך מערכת Kiosk מחליפה את הרישום הכפול לאקסל ול-SAP.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%B7%EF%B8%8F%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -211,6 +211,23 @@
   }
   .pain-card h3{ font-size:16.5px; font-weight:600; font-family:var(--font-body); }
   .pain-card p{ color:var(--ink-soft); font-size:14.5px; margin-block-start:6px; }
+  @media (min-width:900px){ .pain-grid{ grid-template-columns:repeat(3,1fr); } }
+
+  /* bottleneck math callout */
+  .bottleneck{
+    display:flex; align-items:center; justify-content:center; flex-wrap:wrap;
+    gap:18px;
+    background:var(--paper-card);
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:26px 22px;
+    margin-block-start:36px;
+  }
+  .bn-item{ text-align:center; }
+  .bn-num{ font-family:var(--font-display); font-size:clamp(26px,4.4vw,38px); font-weight:700; color:var(--ink); line-height:1; }
+  .bn-num.warn{ color:var(--accent-warn); }
+  .bn-label{ font-size:12.5px; color:var(--ink-soft); margin-block-start:4px; }
+  .bn-op{ font-family:var(--font-display); font-size:22px; color:var(--ink-soft); }
 
   /* ---------- INSIGHT / PULL QUOTE ---------- */
   .insight{ text-align:center; }
@@ -343,6 +360,22 @@
   .compare td.solve{ color:var(--ink); font-weight:700; }
   .compare td.solve svg{ width:16px; height:16px; color:var(--accent-solve); margin-inline-end:8px; vertical-align:-2px; }
 
+  /* ---------- CLOSING ---------- */
+  .closing{ text-align:center; padding-block:16px 8px; }
+  .closing-text{
+    max-width:52ch;
+    margin-inline:auto;
+    font-size:17px;
+    line-height:1.7;
+    color:var(--ink-soft);
+    background:var(--accent-solve-soft);
+    border:1px solid color-mix(in srgb, var(--accent-solve) 40%, transparent);
+    border-radius:16px;
+    padding:22px 26px;
+    margin-block-start:16px;
+  }
+  .closing-text b{ color:var(--accent-solve); }
+
   /* ---------- FOOTER ---------- */
   footer{ padding-block:48px 60px; }
   .foot-row{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; border-top:1px solid var(--line); padding-block-start:28px; }
@@ -361,12 +394,12 @@
   <section class="hero">
     <div class="hero-grain" aria-hidden="true"></div>
     <div class="wrap hero-inner">
-      <span class="eyebrow">הסיפור שמאחורי המערכת</span>
-      <h1>לפני שהייתה מערכת, היה פתק — ולפעמים גם לא</h1>
+      <span class="eyebrow">עתיד הלוגיסטיקה בהנדסה רפואית</span>
+      <h1>משלוח אחד של 60 מיטות. 240 הקלדות ידניות. הזדמנות לטעות בכל אחת מהן</h1>
       <p class="lede">
-        ככה נראה רישום ציוד רפואי במלאי עד היום: מספר סידורי שמועתק ביד על מדבקה, תעודת משלוח שמתפספסת,
-        ותאריך בדיקת בטיחות שאף אחד לא זוכר לרשום בשום מקום. המערכת הזו לא נולדה מרעיון גדול —
-        היא נולדה מהצורך הפשוט לדעת בוודאות איפה כל פריט, מתי הוא נבדק, ולמי הוא נמסר.
+        קליטת ציוד רפואי אינה מסתכמת בשינוע. כל פריט דורש רישום, תיוג, סנכרון נתונים ובדיקות בטיחות מחמירות —
+        פעמיים: פעם אחת לגיליון אקסל, ופעם נוספת למערכת SAP. בקנה מידה של בית חולים מודרני,
+        התהליך הידני הזה קורס תחת העומס. מכאן נולד הצורך במערכת אחת שמחליפה את כל זה.
       </p>
       <div class="badges">
         <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg> ללא נייר</span>
@@ -386,43 +419,38 @@
   <!-- COMPARISON - the whole story in one glance, right up top -->
   <section class="compare">
     <div class="wrap">
-      <span class="eyebrow">לפני ואחרי</span>
-      <h2>מה בעצם השתנה</h2>
+      <span class="eyebrow">מטריצת האבחון</span>
+      <h2>מהפכת הקליטה של Kiosk</h2>
       <div class="compare-card">
         <div class="compare-wrap">
           <table>
             <thead>
               <tr>
                 <th></th>
-                <th class="col-warn">פתק ועט</th>
-                <th class="col-solve">רשם ציוד רפואי</th>
+                <th class="col-warn">העידן הידני</th>
+                <th class="col-solve">עידן ה-Kiosk</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td class="row-label">מספר סידורי</td>
-                <td class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>מועתק ביד, ניתן לטעות</td>
-                <td class="solve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>נסרק ומזוהה אוטומטית</td>
+                <td class="row-label">הזנת נתונים</td>
+                <td class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>הקלדה ידנית כפולה (אקסל + SAP)</td>
+                <td class="solve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>סריקת ברקוד חכמה (1D/2D) ושליפה אוטומטית</td>
               </tr>
               <tr>
-                <td class="row-label">מספר אינוונטר</td>
-                <td class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>נבחר ידנית מתוך זיכרון</td>
-                <td class="solve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>מוקצה אוטומטית מטווח קבוע</td>
+                <td class="row-label">רמת דיוק</td>
+                <td class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>סיכוי גבוה לטעויות אנוש וכפילויות</td>
+                <td class="solve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>100% דיוק ורצף אינוונטר מבוקר</td>
               </tr>
               <tr>
-                <td class="row-label">בדיקת בטיחות</td>
-                <td class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>תלוי שמישהו יזכור</td>
-                <td class="solve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>סטטוס ותאריך במערכת</td>
+                <td class="row-label">עמידה בתקנים</td>
+                <td class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>תהליך בדיקה נפרד ומעכב</td>
+                <td class="solve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>תיעוד והדפסת מדבקות בטיחות כחלק מהזרימה</td>
               </tr>
               <tr>
-                <td class="row-label">מסירה ליעד</td>
-                <td class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>בלי שום אישור</td>
-                <td class="solve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>שם מקבל, מחלקה ותאריך</td>
-              </tr>
-              <tr>
-                <td class="row-label">איפה המידע</td>
-                <td class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>דף שיכול להיעלם</td>
-                <td class="solve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>מאגר מקומי בטלפון</td>
+                <td class="row-label">מהירות תהליך</td>
+                <td class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>צוואר בקבוק איטי ומסורבל</td>
+                <td class="solve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>רצף עבודה רציף, מהיר ונגיש מעמדה בודדת</td>
               </tr>
             </tbody>
           </table>
@@ -434,47 +462,41 @@
   <!-- PROBLEM -->
   <section class="problem">
     <div class="wrap">
-      <span class="eyebrow warn">הבעיה</span>
-      <h2>תיוג ידני הוא ניחוש מאורגן</h2>
+      <span class="eyebrow warn">משבר הקליטה הידנית</span>
+      <h2>3 מוקדי קריסה</h2>
       <p class="lede">
-        כל פריט ציוד שמגיע צריך שתי מדבקות, מספר אינוונטר, ותיעוד של מי בדק ומתי.
-        כשכל זה קורה על פתקים נפרדים — כל שלב הוא הזדמנות נוספת לטעות, לאובדן, או סתם לשכחה.
+        אנטומיה של צוואר בקבוק: המתמטיקה של טעויות אנוש. כל משלוח נסרק פעם אחת ידנית לגיליון אקסל,
+        ופעם נוספת למערכת ה-SAP — וסיכון הטעות רק גדל בכל הקלדה.
       </p>
 
-      <div class="notes" aria-hidden="true">
-        <div class="note"><b>מס׳ סידורי</b>אולי 1389998? אולי 138998... קשה לקרוא</div>
-        <div class="note"><b>בדיקת בטיחות</b>לרשום איפשהו לבדוק שוב בעוד שנה</div>
-        <div class="note"><b>נמסר למי?</b>למחלקה... איזו מחלקה? מי חתם?</div>
-        <div class="note"><b>תעודת משלוח</b>איפה זה בכלל, מישהו ראה?</div>
+      <div class="bottleneck" aria-label="60 שולחנות בדיקה כפול שתי הקלדות ידניות שוות 240 פעולות הקלדה למשלוח אחד">
+        <div class="bn-item"><div class="bn-num">60</div><div class="bn-label">שולחנות בדיקה במשלוח</div></div>
+        <div class="bn-op">×</div>
+        <div class="bn-item"><div class="bn-num">2</div><div class="bn-label">הקלדות ידניות לכל פריט<br>(אקסל + SAP)</div></div>
+        <div class="bn-op">=</div>
+        <div class="bn-item"><div class="bn-num warn">240</div><div class="bn-label">הקלדות ידניות למשלוח אחד</div></div>
       </div>
 
       <div class="pain-grid">
         <div class="pain-card">
-          <div class="icon-tile warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l6-1 10-10a2.5 2.5 0 00-3.5-3.5L6.5 15.5z"/><path d="M14 6l4 4"/></svg></div>
+          <div class="icon-tile warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9.5 12l1.8 1.8L15 10"/></svg></div>
           <div>
-            <h3>כתב יד לא קריא</h3>
-            <p>מספר סידורי שנכתב בעט על מדבקה מתקלפת קשה לקרוא כבר ביום הראשון — ובלתי אפשרי אחרי חצי שנה.</p>
+            <h3>עיכובי בטיחות</h3>
+            <p>מכשור רפואי מחויב בבדיקות בטיחות חשמלית. תהליך מפוצל גורם לעיכוב בקליטה ומונע עמידה בתקנים מחמירים באופן יעיל.</p>
           </div>
         </div>
         <div class="pain-card">
-          <div class="icon-tile warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.5 2.5 0 014.9.8c0 1.7-2.4 2-2.4 3.5"/><path d="M12 17h.01"/></svg></div>
+          <div class="icon-tile warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M9 4v16"/><path d="M14 15l3 3m0-3l-3 3" stroke="var(--accent-warn)"/></svg></div>
           <div>
-            <h3>אף מקום לא "זוכר"</h3>
-            <p>כשהרישום מתבצע על פתק או בגיליון נפרד, שום מקום לא זוכר אילו פריטים כבר טופלו ואילו עדיין מחכים.</p>
+            <h3>אובדן נתונים וכפילויות</h3>
+            <p>ניהול ידני בגיליונות אקסל נפרדים מוביל לשבירת רצף מספרי הנכס, כפילויות במערכת ואובדן מידע יקר.</p>
           </div>
         </div>
         <div class="pain-card">
-          <div class="icon-tile warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 11h16"/><path d="M9 16l2 2 4-4"/></svg></div>
+          <div class="icon-tile warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M7 9h.01M11 9h.01M15 9h.01M7 13h6"/><circle cx="17.5" cy="14.5" r="3.2" stroke="var(--accent-warn)"/><path d="M16.3 14.5l.9.9 1.6-1.7" stroke="var(--accent-warn)"/></svg></div>
           <div>
-            <h3>תאריכים שנשכחים</h3>
-            <p>בלי תזכורת דיגיטלית, בדיקת בטיחות חשמל שנתית קל לפספס — וזה סיכון בטיחותי, לא רק אי־נוחות.</p>
-          </div>
-        </div>
-        <div class="pain-card">
-          <div class="icon-tile warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7l8-4 8 4-8 4-8-4z"/><path d="M4 7v10l8 4 8-4V7"/><path d="M12 11v10"/></svg></div>
-          <div>
-            <h3>אין תיעוד מסירה</h3>
-            <p>ציוד יוצא למחלקה בלי אישור שמישהו קיבל אותו — וכשמשהו הולך לאיבוד, אין לאן לחזור ולבדוק.</p>
+            <h3>טעויות אנוש בדיווח</h3>
+            <p>הקלדה ידנית של מספרי S/N ארוכים ומורכבים גורמת לשגיאות קריטיות בזיהוי הציוד.</p>
           </div>
         </div>
       </div>
@@ -484,45 +506,45 @@
   <!-- INSIGHT -->
   <section class="insight">
     <div class="wrap">
-      <blockquote>אם המדבקה היא <span class="mark">הזהות</span> של הציוד — למה שהיא לא <span class="mark">תדע לספר</span> את הסיפור שלו בעצמה?</blockquote>
-      <span class="attrib">כך התחיל הפרויקט</span>
+      <blockquote>לא עוד רישום כפול לאקסל ול-SAP. <span class="mark">עמדה אחת</span>, <span class="mark">סריקה אחת</span>, אמת אחת.</blockquote>
+      <span class="attrib">שינוי פרדיגמה: הכירו את מערכת Kiosk</span>
     </div>
   </section>
 
   <!-- SOLUTION -->
   <section class="solution">
     <div class="wrap">
-      <span class="eyebrow">מה שקם במקום זה</span>
-      <h2>סריקה אחת, במקום שלושה פתקים</h2>
+      <span class="eyebrow">4 מודולים</span>
+      <h2>מעומס ולוגיסטיקה מורכבת — לזרימה חכמה</h2>
 
       <div class="solution-grid">
         <div class="steps">
           <div class="step">
             <div class="step-num">1</div>
             <div>
-              <h3>סריקה</h3>
-              <p>מצלמת הטלפון מזהה את מדבקת היצרן ומחלצת ממנה את המספר הסידורי אוטומטית — בלי הקלדה.</p>
+              <h3>אפס הקלדות</h3>
+              <p>סריקת ברקודים מכל הסוגים (1D/2D, GS1-128, DataMatrix) וחילוץ אוטומטי של המספר הסידורי בעזרת חוקי זיהוי — 100% דיוק, אפס שגיאות הקלדה.</p>
             </div>
           </div>
           <div class="step">
             <div class="step-num">2</div>
             <div>
-              <h3>שיוך אוטומטי</h3>
-              <p>מספר אינוונטר מוקצה מיד מתוך טווח מוגדר מראש, בלי צורך לחפש או להמציא מספר פנוי.</p>
+              <h3>רצף ללא רבב</h3>
+              <p>שיוך אוטומטי של מספר נכס מתוך טווח מוגדר מראש. רצף חד־ערכי שמונע כפילויות, בלי גיליון אקסל חיצוני שצריך לעדכן.</p>
             </div>
           </div>
           <div class="step">
             <div class="step-num">3</div>
             <div>
-              <h3>הדפסת מדבקות</h3>
-              <p>מדבקת אינוונטר ומדבקת בטיחות חשמל מודפסות ומשויכות לאותו פריט, באותו רגע.</p>
+              <h3>תאימות מובנית</h3>
+              <p>רישום מיידי של סטטוס בדיקת הבטיחות החשמלית, והדפסת מדבקת בטיחות ומדבקת נכס ישירות מעמדת הסריקה.</p>
             </div>
           </div>
           <div class="step">
             <div class="step-num">4</div>
             <div>
-              <h3>מסירה מתועדת</h3>
-              <p>כשהציוד מגיע ליעד הסופי, המסירה נרשמת עם שם המקבל, המחלקה והתאריך — במקום אחד.</p>
+              <h3>שליטה בזמן אמת</h3>
+              <p>דשבורד ניהול עם תמונת מצב חיה: כמות פריטים שנקלטו, סטטוס בדיקות ותפלגות הציוד לפי מחלקה — הכל ממרכז בקרה אחד.</p>
             </div>
           </div>
         </div>
@@ -547,6 +569,17 @@
     </div>
   </section>
 
+  <!-- CLOSING -->
+  <section class="closing">
+    <div class="wrap">
+      <span class="eyebrow">השורה התחתונה</span>
+      <p class="closing-text">
+        רשם הציוד הרפואי <b>Kiosk</b> אינו רק כלי רישום; הוא הופך תהליך קליטה איטי ומועד לפורענות —
+        לתהליך עבודה רציף, מהיר ובטוח במאה אחוז, הכל בעמדת סריקה בודדת.
+      </p>
+    </div>
+  </section>
+
   <footer>
     <div class="wrap">
       <div class="foot-row">
@@ -554,7 +587,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M9 12l2 2 4-4"/></svg>
           כללית הנדסה רפואית בע״מ
         </div>
-        <span class="tagline">התחלנו מפתק שהתעופף. הגענו למערכת שלא שוכחת.</span>
+        <span class="tagline">לניהול הנדסי חכם, מדויק ויעיל יותר.</span>
         <a class="foot-link" href="https://github.com/Roei2p/kiosk/releases/download/debug-latest/kiosk-debug.apk" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13"/><path d="M7 11l5 5 5-5"/><path d="M5 20h14"/></svg>
           הורדת ה-APK
